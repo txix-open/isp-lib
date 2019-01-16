@@ -26,18 +26,6 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:5dc6536e19d0ddc918126448442a06dd3b5f834ac00fd1124bc55f5cb44a4407"
-  name = "github.com/d1slike/go-cmp"
-  packages = [
-    "cmp/internal/diff",
-    "cmp/internal/function",
-    "cmp/internal/value",
-  ]
-  pruneopts = "UT"
-  revision = "31671faacc2afcac467a6a253d07073ffa9d2d76"
-  version = "v0.3.0"
-
-[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -119,7 +107,6 @@
   ]
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
-  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -184,12 +171,17 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:f95e3587fada61c3179bdcf4b34f0db5144b8c3e545a79e41f790ed37d3a0c70"
+  branch = "master"
+  digest = "1:1b1d9534e35d61e861a7356f7f2d766e57e2777dbf79be60e1ac56bbd60adf51"
   name = "github.com/integration-system/go-cmp"
-  packages = ["cmp"]
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
   pruneopts = "UT"
-  revision = "31671faacc2afcac467a6a253d07073ffa9d2d76"
-  version = "v0.3.0"
+  revision = "ed1c8d9bf7906aec13cf28080fdf069d7687471a"
 
 [[projects]]
   branch = "master"
