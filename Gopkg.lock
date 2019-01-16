@@ -26,6 +26,18 @@
   version = "v0.1.1"
 
 [[projects]]
+  digest = "1:5dc6536e19d0ddc918126448442a06dd3b5f834ac00fd1124bc55f5cb44a4407"
+  name = "github.com/d1slike/go-cmp"
+  packages = [
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "UT"
+  revision = "31671faacc2afcac467a6a253d07073ffa9d2d76"
+  version = "v0.3.0"
+
+[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -89,15 +101,21 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:33ed5e4977aa41d90a7944c173080c9cf6c5ecba2419ff7c8e1385f16a67bc8c"
+  digest = "1:5eae7496bdb74a6c7592bc74ea3da8a6a61a361fd52682820900d755bb144194"
   name = "github.com/golang/protobuf"
   packages = [
+    "jsonpb",
     "proto",
+    "protoc-gen-go/descriptor",
+    "protoc-gen-go/generator",
+    "protoc-gen-go/generator/internal/remap",
+    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
     "ptypes/struct",
     "ptypes/timestamp",
+    "ptypes/wrappers",
   ]
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
@@ -135,6 +153,18 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:1125fb981553dec25344f857eb68ccf2438c3696bc2f718acbb56321933490d0"
+  name = "github.com/grpc-ecosystem/grpc-gateway"
+  packages = [
+    "runtime",
+    "runtime/internal",
+    "utilities",
+  ]
+  pruneopts = "UT"
+  revision = "ae4bb97e7718691c8e0742a7c07989c91630e042"
+  version = "v1.6.4"
+
+[[projects]]
   digest = "1:c0d19ab64b32ce9fe5cf4ddceba78d5bc9807f0016db6b1183599da3dcc24d10"
   name = "github.com/hashicorp/hcl"
   packages = [
@@ -152,6 +182,54 @@
   pruneopts = "UT"
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:f95e3587fada61c3179bdcf4b34f0db5144b8c3e545a79e41f790ed37d3a0c70"
+  name = "github.com/integration-system/go-cmp"
+  packages = ["cmp"]
+  pruneopts = "UT"
+  revision = "31671faacc2afcac467a6a253d07073ffa9d2d76"
+  version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9e2fd899fdb17e28e9d036fe7a604a1e04918aa4865d5a2150008fc12c6134be"
+  name = "github.com/integration-system/golang-socketio"
+  packages = [
+    ".",
+    "protocol",
+    "transport",
+  ]
+  pruneopts = "UT"
+  revision = "5959fcea049facd9441fff9de976191accd3cf9f"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f4fdde36da0bf729ab6c3b0a3537d656af3f576258e824363b089633cc066875"
+  name = "github.com/integration-system/isp-lib"
+  packages = [
+    "backend",
+    "config",
+    "config/schema",
+    "http",
+    "logger",
+    "metric",
+    "proto/stubs",
+    "socket",
+    "streaming",
+    "structure",
+    "utils",
+  ]
+  pruneopts = "UT"
+  revision = "b8af5ab14c46117348ecec24feaecd5b2a661920"
+
+[[projects]]
+  branch = "master"
+  digest = "1:a992b3ab79433b828258f9fe99af29da5aeb2e48bf8076a41ba556ac90ac04d3"
+  name = "github.com/integration-system/jsonschema"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "170a88febd847f36821e99ec54a095e6cec48528"
 
 [[projects]]
   branch = "master"
@@ -438,39 +516,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:77bf194235d7e0ec193ddc4fdaeb9408ded749819c7c8f539fa09128438d925e"
-  name = "github.com/integration-system/go-cmp"
-  packages = [
-    "cmp",
-    "cmp/internal/diff",
-    "cmp/internal/function",
-    "cmp/internal/value",
-  ]
-  pruneopts = "UT"
-  revision = "cc96371ce67a0308fd91ffab056c222a5222ca33"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f5640125fe1e01fe49a654bd0e575a4a889cee4069efc99475234c4923ee4467"
-  name = "github.com/integration-system/golang-socketio"
-  packages = [
-    ".",
-    "protocol",
-    "transport",
-  ]
-  pruneopts = "UT"
-  revision = "4a8fd099f2b62400f61bbc525a19d35741530dc2"
-
-[[projects]]
-  branch = "master"
-  digest = "1:a992b3ab79433b828258f9fe99af29da5aeb2e48bf8076a41ba556ac90ac04d3"
-  name = "github.com/integration-system/jsonschema"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "25f14e773320077c48f3612e1174392b9e42c8d4"
-
-[[projects]]
-  branch = "master"
   digest = "1:9ff2b9f8d4e47013a213b9ea0d850ed787c51f5eab2038842d82397ad85a19c1"
   name = "golang.org/x/crypto"
   packages = [
@@ -531,15 +576,16 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:bb1d7b9f535fd3f634440825c1ee5c36b3f2c12318a6152ea2575d31f5a7502a"
+  digest = "1:46be2f6b4d4e4b89f8102668902e68013234da1684fc78da602da95e745f285d"
   name = "google.golang.org/genproto"
   packages = [
+    "googleapis/api/annotations",
     "googleapis/rpc/errdetails",
     "googleapis/rpc/status",
+    "protobuf/field_mask",
   ]
   pruneopts = "UT"
-  revision = "bd91e49a0898e27abb88c339b432fa53d7497ac0"
+  revision = "383e8b2c3b9e36c4076b235b32537292176bae20"
 
 [[projects]]
   digest = "1:9edd250a3c46675d0679d87540b30c9ed253b19bd1fd1af08f4f5fb3c79fc487"
@@ -619,6 +665,22 @@
     "github.com/golang/protobuf/ptypes/struct",
     "github.com/googollee/go-engine.io",
     "github.com/googollee/go-socket.io",
+    "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/grpc-ecosystem/grpc-gateway/utilities",
+    "github.com/integration-system/go-cmp/cmp",
+    "github.com/integration-system/golang-socketio",
+    "github.com/integration-system/isp-lib/backend",
+    "github.com/integration-system/isp-lib/config",
+    "github.com/integration-system/isp-lib/config/schema",
+    "github.com/integration-system/isp-lib/http",
+    "github.com/integration-system/isp-lib/logger",
+    "github.com/integration-system/isp-lib/metric",
+    "github.com/integration-system/isp-lib/proto/stubs",
+    "github.com/integration-system/isp-lib/socket",
+    "github.com/integration-system/isp-lib/streaming",
+    "github.com/integration-system/isp-lib/structure",
+    "github.com/integration-system/isp-lib/utils",
+    "github.com/integration-system/jsonschema",
     "github.com/jinzhu/inflection",
     "github.com/json-iterator/go",
     "github.com/json-iterator/go/extra",
@@ -636,13 +698,12 @@
     "github.com/thecodeteam/goodbye",
     "github.com/valyala/fasthttp",
     "github.com/x-cray/logrus-prefixed-formatter",
-    "github.com/integration-system/go-cmp/cmp",
-    "github.com/integration-system/golang-socketio",
-    "github.com/integration-system/jsonschema",
     "golang.org/x/net/context",
+    "google.golang.org/genproto/googleapis/api/annotations",
     "google.golang.org/genproto/googleapis/rpc/errdetails",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/grpclog",
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/stats",
     "google.golang.org/grpc/status",
