@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mohae/deepcopy"
-	"github.com/thecodeteam/goodbye"
+	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/backend"
 	"github.com/integration-system/isp-lib/config"
 	"github.com/integration-system/isp-lib/config/schema"
@@ -14,7 +13,8 @@ import (
 	"github.com/integration-system/isp-lib/socket"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
-	"github.com/integration-system/golang-socketio"
+	"github.com/mohae/deepcopy"
+	"github.com/thecodeteam/goodbye"
 	"os"
 	"reflect"
 	"strings"
@@ -96,7 +96,7 @@ type bootstrap2 struct {
 	onShutdown            shutdownHandler
 
 	requiredModules  map[string]*connectConsumer
-	connectedModules map[string]map[string]bool
+	connectedModules map[string][]string
 
 	socketCfgProducer  socketConfigProducer
 	moduleInfoProducer moduleInfoProducer
@@ -110,6 +110,7 @@ type bootstrap2 struct {
 
 	subs                     map[string]interface{}
 	client                   *gosocketio.Client
+	ready                    bool
 	lastFailedConnectionTime time.Time
 }
 
@@ -230,14 +231,14 @@ func (b *bootstrap2) Run() {
 
 	b.sendRemoteConfigSchema()
 
-	ready := false
+	b.ready = false
 
 	remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules := b.initialState()
 	remoteConfigTimeoutChan := time.After(3 * time.Second)
 	neverTriggerChan := make(chan time.Time)
 	initChan := make(chan struct{}, 1)
 	for {
-		if !ready && remoteConfigReady && requiredModulesReady && routesReady {
+		if !b.ready && remoteConfigReady && requiredModulesReady && routesReady {
 			initChan <- struct{}{}
 		}
 
@@ -249,7 +250,7 @@ func (b *bootstrap2) Run() {
 			}
 			remoteConfigReady = true
 			b.remoteConfigPtr = newRemoteConfig
-			if !ready {
+			if !b.ready {
 				b.sendRequirements()
 			}
 			remoteConfigTimeoutChan = neverTriggerChan
@@ -276,19 +277,19 @@ func (b *bootstrap2) Run() {
 				}
 				requiredModulesReady = ok
 
-				addListMap := make(map[string]bool, len(e.addressList))
+				addrList := make([]string, 0, len(e.addressList))
 				if currentConnectedModules[e.event] {
 					for _, addr := range e.addressList {
-						addListMap[addr.GetAddress()] = true
+						addrList = append(addrList, addr.GetAddress())
 					}
 				}
-				b.connectedModules[e.event] = addListMap
+				b.connectedModules[e.event] = addrList
 			}
 		case <-initChan:
-			ready = true
+			b.ready = true
 			b.sendModuleReady()
 		case <-b.disconnectChan:
-			ready = false
+			b.ready = false
 			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
 		case <-b.exitChan:
 			return
@@ -409,10 +410,10 @@ func (b *bootstrap2) initStatusMetrics() {
 			lastFailedConnectionMsAgo = time.Now().Sub(b.lastFailedConnectionTime) / 1e6
 		}
 		return map[string]interface{}{
-			uri: map[string]interface{}{
-				"connected":                 status,
-				"lastFailedConnectionMsAgo": lastFailedConnectionMsAgo,
-			},
+			"connected":                 status,
+			"lastFailedConnectionMsAgo": lastFailedConnectionMsAgo,
+			"address":                   uri,
+			"moduleReady":               b.ready,
 		}
 	})
 
@@ -420,7 +421,12 @@ func (b *bootstrap2) initStatusMetrics() {
 		moduleName := strings.Replace(k, "_"+utils.ModuleConnectionSuffix, "", -1)
 		keyCopy := k
 		metric.InitStatusChecker(fmt.Sprintf("%s-grpc", moduleName), func() interface{} {
-			return b.connectedModules[keyCopy]
+			addrList, ok := b.connectedModules[keyCopy]
+			if ok {
+				return addrList
+			} else {
+				return []string{}
+			}
 		})
 	}
 }
@@ -598,7 +604,7 @@ func ServiceBootstrap(localConfigPtr, remoteConfigPtr interface{}) *bootstrap2 {
 		localConfigType:  reflect.TypeOf(localConfigPtr).String(),
 		requiredModules:  make(map[string]*connectConsumer),
 		subs:             make(map[string]interface{}),
-		connectedModules: make(map[string]map[string]bool),
+		connectedModules: make(map[string][]string),
 		remoteConfigChan: make(chan interface{}),
 		connectEventChan: make(chan connectEvent),
 		exitChan:         make(chan struct{}),

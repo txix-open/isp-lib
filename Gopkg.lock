@@ -197,26 +197,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f4fdde36da0bf729ab6c3b0a3537d656af3f576258e824363b089633cc066875"
-  name = "github.com/integration-system/isp-lib"
-  packages = [
-    "backend",
-    "config",
-    "config/schema",
-    "http",
-    "logger",
-    "metric",
-    "proto/stubs",
-    "socket",
-    "streaming",
-    "structure",
-    "utils",
-  ]
-  pruneopts = "UT"
-  revision = "b8af5ab14c46117348ecec24feaecd5b2a661920"
-
-[[projects]]
-  branch = "master"
   digest = "1:a992b3ab79433b828258f9fe99af29da5aeb2e48bf8076a41ba556ac90ac04d3"
   name = "github.com/integration-system/jsonschema"
   packages = ["."]
@@ -661,17 +641,6 @@
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/integration-system/go-cmp/cmp",
     "github.com/integration-system/golang-socketio",
-    "github.com/integration-system/isp-lib/backend",
-    "github.com/integration-system/isp-lib/config",
-    "github.com/integration-system/isp-lib/config/schema",
-    "github.com/integration-system/isp-lib/http",
-    "github.com/integration-system/isp-lib/logger",
-    "github.com/integration-system/isp-lib/metric",
-    "github.com/integration-system/isp-lib/proto/stubs",
-    "github.com/integration-system/isp-lib/socket",
-    "github.com/integration-system/isp-lib/streaming",
-    "github.com/integration-system/isp-lib/structure",
-    "github.com/integration-system/isp-lib/utils",
     "github.com/integration-system/jsonschema",
     "github.com/jinzhu/inflection",
     "github.com/json-iterator/go",
