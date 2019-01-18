@@ -1,29 +1,29 @@
 package nats
 
 import (
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats-streaming"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
+	"github.com/nats-io/go-nats"
+	"github.com/nats-io/go-nats-streaming"
 	"math"
 	"sync"
 	"time"
 )
 
 type NatsConfig struct {
-	ClusterId             string                         `valid:"required~Required"`
-	Address               structure.AddressConfiguration `valid:"required~Required"`
-	PingAttempts          int
-	PintIntervalSec       int
-	ClientId              string           `json:"-"`
-	ConnectionLostHandler nats.ConnHandler `json:"-"`
+	ClusterId             string                         `valid:"required~Required" schema:"Cluster ID"`
+	Address               structure.AddressConfiguration `valid:"required~Required" schema:"Address"`
+	PingAttempts          int                            `schema:"Max ping attempts,When max attempts is reached connection is closed"`
+	PintIntervalSec       int                            `schema:"Ping interval,In seconds"`
+	ClientId              string                         `json:"-"`
+	ConnectionLostHandler nats.ConnHandler               `json:"-"`
 }
 
 type NatsClient struct {
 	stan.Conn
 	Addr string
 
-	natsСonn    *nats.Conn
+	natsConn    *nats.Conn
 	mu          sync.Mutex
 	durableSubs []*DurableSub
 }
@@ -66,7 +66,7 @@ func (nc *NatsClient) Close() error {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	defer nc.natsСonn.Close()
+	defer nc.natsConn.Close()
 
 	if err := nc.Conn.Close(); err != nil {
 		return err
@@ -129,11 +129,11 @@ func NewNatsStreamingServerClient(natsConfig *NatsConfig) (*NatsClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.natsСonn = natsConn
+	client.natsConn = natsConn
 
 	stanConn, err := newStanConn(natsConfig, natsConn)
 	if err != nil {
-		client.natsСonn.Close()
+		client.natsConn.Close()
 		return nil, err
 	}
 

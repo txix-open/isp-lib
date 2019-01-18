@@ -3,11 +3,11 @@ package database
 import (
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
+	"github.com/integration-system/isp-lib/logger"
+	"github.com/integration-system/isp-lib/utils"
 	"github.com/jinzhu/inflection"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose"
-	"github.com/integration-system/isp-lib/logger"
-	"github.com/integration-system/isp-lib/utils"
 	"os"
 	"path"
 	"strings"
@@ -24,14 +24,14 @@ var (
 )
 
 type DBConfiguration struct {
-	Address      string `valid:"required~Required"`
-	Schema       string `valid:"required~Required"`
-	Database     string `valid:"required~Required"`
-	Port         string `valid:"required~Required"`
-	Username     string
-	Password     string
-	PoolSize     int
-	CreateSchema bool
+	Address      string `valid:"required~Required" schema:"Host"`
+	Schema       string `valid:"required~Required" schema:"Schema"`
+	Database     string `valid:"required~Required" schema:"Database"`
+	Port         string `valid:"required~Required" schema:"Port"`
+	Username     string `schema:"Username"`
+	Password     string `schema:"Password"`
+	PoolSize     int    `schema:"Connection pool size,Default is 10 connections per every CPU"`
+	CreateSchema bool   `schema:"Enable schema ensuring,Create schema if not exists"`
 }
 
 type DBManager struct {

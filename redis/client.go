@@ -34,9 +34,9 @@ func (c *RdClient) UseDbTx(dbIndex DB, f func(p rd.Pipeliner) error) ([]rd.Cmder
 }
 
 type RedisConfiguration struct {
-	Address   structure.AddressConfiguration
-	Password  string
-	DefaultDB int
+	Address   structure.AddressConfiguration `schema:"Address"`
+	Password  string                         `schema:"Password"`
+	DefaultDB int                            `schema:"Default database"`
 }
 
 func InitClient(cfg RedisConfiguration) *RdClient {

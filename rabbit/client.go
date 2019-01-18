@@ -2,8 +2,8 @@ package rabbit
 
 import (
 	"fmt"
-	"github.com/streadway/amqp"
 	"github.com/integration-system/isp-lib/structure"
+	"github.com/streadway/amqp"
 	"sync"
 	"time"
 )
@@ -18,14 +18,13 @@ type ErrHandler func(err error)
 type DisconnectionHandler func(err *amqp.Error)
 
 type RabbitConfig struct {
-	Address                  structure.AddressConfiguration `valid:"required~Required"`
-	Vhost                    string
-	User                     string
-	Password                 string
-	ReconnectionTimeoutMs    int64
-	DisconnectionHandler     DisconnectionHandler `json:"-"`
-	ReconnectionErrorHandler ErrHandler           `json:"-"`
-	SubscriptionErrorHandler ErrHandler           `json:"-"`
+	Address                  structure.AddressConfiguration `valid:"required~Required" schema:"Address"`
+	Vhost                    string                         `schema:"Vhost"`
+	User                     string                         `schema:"Username"`
+	Password                 string                         `schema:"Password"`
+	DisconnectionHandler     DisconnectionHandler           `json:"-"`
+	ReconnectionErrorHandler ErrHandler                     `json:"-"`
+	SubscriptionErrorHandler ErrHandler                     `json:"-"`
 }
 
 func (rc RabbitConfig) GetUri() string {
@@ -37,11 +36,11 @@ func (rc RabbitConfig) GetUri() string {
 }
 
 func (rc RabbitConfig) reconnectionTimeout() time.Duration {
-	timeout := rc.ReconnectionTimeoutMs
+	/*timeout := rc.ReconnectionTimeoutMs
 	if timeout <= 0 {
 		timeout = defaultReconnectionTimeout
-	}
-	return time.Duration(timeout) * time.Millisecond
+	}*/
+	return 3 * time.Millisecond
 }
 
 type Client struct {
