@@ -14,13 +14,14 @@ import (
 const timestampFormat = "2006-01-02T15:04:05.999-07:00"
 
 type SyncLoggerConfig struct {
-	Enable     bool   `schema:"Enable file logging"`
-	Filename   string `json:"filename" yaml:"filename" schema:"File name"`
-	MaxSize    int    `json:"-" yaml:"maxsize"`
-	MaxAge     int    `json:"-" yaml:"maxage"`
-	MaxBackups int    `json:"-" yaml:"maxbackups"`
-	LocalTime  bool   `json:"-" yaml:"localtime"`
-	Compress   bool   `json:"-" yaml:"compress"`
+	Enable         bool   `schema:"Enable file logging"`
+	Filename       string `json:"filename" yaml:"filename" schema:"File name"`
+	MaxSize        int    `json:"-" yaml:"maxsize"`
+	MaxAge         int    `json:"-" yaml:"maxage"`
+	MaxBackups     int    `json:"-" yaml:"maxbackups"`
+	LocalTime      bool   `json:"-" yaml:"localtime"`
+	Compress       bool   `json:"compress" yaml:"compress"`
+	ImmediateFlush bool   `json:"immediateFlush" yaml:"immediateFlush"`
 }
 
 type SyncLogger interface {
@@ -28,7 +29,7 @@ type SyncLogger interface {
 	io.Closer
 }
 
-func NewGZipLogger(config SyncLoggerConfig) (SyncLogger, error) {
+func NewFileLogger(config SyncLoggerConfig) (SyncLogger, error) {
 	if !config.Enable {
 		return nil, nil
 	} else {
@@ -50,47 +51,63 @@ func NewGZipLogger(config SyncLoggerConfig) (SyncLogger, error) {
 				config.Filename,
 				err)
 		}
-		gf := gzip.NewWriter(file)
-		fw := bufio.NewWriter(gf)
+		var fw *bufio.Writer
+		var gf *gzip.Writer
+		if config.Compress {
+			gf = gzip.NewWriter(file)
+			fw = bufio.NewWriter(gf)
+		} else {
+			fw = bufio.NewWriter(file)
+		}
 
-		return &gzipLogger{fw: fw, gf: gf, log: file}, nil
+		return &logger{fw: fw, gf: gf, log: file, compress: config.Compress, immediateFlush: config.ImmediateFlush}, nil
 	}
 }
 
-type gzipLogger struct {
-	log  *os.File
-	lock sync.Mutex
-	gf   *gzip.Writer
-	fw   *bufio.Writer
+type logger struct {
+	log            *os.File
+	lock           sync.Mutex
+	gf             *gzip.Writer
+	fw             *bufio.Writer
+	compress       bool
+	immediateFlush bool
 }
 
-func (dfl *gzipLogger) Log(event, source string, data string) error {
+func (dfl *logger) Log(event, source string, data string) error {
 	dfl.lock.Lock()
-	_, err := dfl.fw.WriteString(time.Now().Format(timestampFormat) + " " + event + " " + source + " " + data + "\n")
+	_, err := dfl.fw.WriteString(time.Now().Format(timestampFormat) + " " + event + " " + source + " " + data + "\n\n")
+	if dfl.immediateFlush {
+		dfl.fw.Flush()
+		if dfl.compress {
+			err = dfl.gf.Flush()
+		}
+	}
 	dfl.lock.Unlock()
 	return err
 }
 
-func (dfl *gzipLogger) Close() error {
-	dfl.closeGZ()
+func (dfl *logger) Close() error {
+	dfl.close()
 	return nil
 }
 
-func (dfl *gzipLogger) closeGZ() {
+func (dfl *logger) close() {
 	err := dfl.fw.Flush()
 	if err != nil {
 		Warn("An error occurred when were tried to flush buffer data into a log file", err)
 	}
 
-	err = dfl.gf.Flush()
-	if err != nil {
-		Warn("An error occurred when were tried to flush gz data into a log file", err)
-	}
+	if dfl.compress {
+		err = dfl.gf.Flush()
+		if err != nil {
+			Warn("An error occurred when were tried to flush gz data into a log file", err)
+		}
 
-	// Close the gzip first.
-	err = dfl.gf.Close()
-	if err != nil {
-		Warn("An error occurred when were tried to close gzip writer", err)
+		// Close the gzip first.
+		err = dfl.gf.Close()
+		if err != nil {
+			Warn("An error occurred when were tried to close gzip writer", err)
+		}
 	}
 
 	err = dfl.log.Close()

@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	LibraryVersion = "0.7.0"
+	LibraryVersion = "0.7.1"
 )
 
 type RoutesDeclarator interface {
