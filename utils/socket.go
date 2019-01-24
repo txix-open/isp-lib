@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"github.com/integration-system/isp-lib/logger"
+	"net/url"
 )
 
 const (
@@ -26,4 +29,19 @@ const (
 
 func ModuleConnected(moduleName string) string {
 	return fmt.Sprintf("%s_%s", moduleName, ModuleConnectionSuffix)
+}
+
+func ParseParameters(queryRaw string) (instanceUUID string, moduleName string, error error) {
+	parsedParams, _ := url.ParseQuery(queryRaw)
+	moduleName = parsedParams.Get("module_name")
+	instanceUuid := parsedParams.Get("instance_uuid")
+	if moduleName == "" || instanceUuid == "" || !IsValidUUID(instanceUuid) {
+		err := fmt.Sprintf("SocketIO not received all parameters, module_name: %s, instance_uuid: %s",
+			moduleName,
+			instanceUuid,
+		)
+		logger.Debug(err)
+		return "", "", errors.New(err)
+	}
+	return instanceUuid, moduleName, nil
 }
