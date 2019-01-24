@@ -12,10 +12,14 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	"github.com/fsnotify/fsnotify"
-	"github.com/mohae/deepcopy"
-	"github.com/spf13/viper"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/utils"
+	"github.com/mohae/deepcopy"
+	"github.com/spf13/viper"
+)
+
+const (
+	EnvPrefix = "isp"
 )
 
 var (
@@ -32,7 +36,7 @@ var (
 func init() {
 	ex, _ := os.Executable()
 
-	viper.SetEnvPrefix("isp")
+	viper.SetEnvPrefix(EnvPrefix)
 	viper.AutomaticEnv()
 
 	envConfigName := "config"
