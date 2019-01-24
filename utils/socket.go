@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/integration-system/isp-lib/logger"
 	"net/url"
 )
 
@@ -40,7 +39,6 @@ func ParseParameters(queryRaw string) (instanceUUID string, moduleName string, e
 			moduleName,
 			instanceUuid,
 		)
-		logger.Debug(err)
 		return "", "", errors.New(err)
 	}
 	return instanceUuid, moduleName, nil
