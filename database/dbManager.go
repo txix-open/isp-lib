@@ -166,7 +166,7 @@ func ResolveMigrationsDirectrory() string {
 		migrationDir = path.Dir(ex) + "/" + migrationDir
 	}
 	if utils.EnvMigrationPath != "" {
-		if strings.HasSuffix(utils.EnvMigrationPath, "/") {
+		if strings.HasPrefix(utils.EnvMigrationPath, "/") {
 			migrationDir = utils.EnvMigrationPath
 		} else {
 			migrationDir = path.Dir(ex) + "/" + utils.EnvMigrationPath
