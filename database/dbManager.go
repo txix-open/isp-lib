@@ -10,7 +10,6 @@ import (
 	"github.com/pressly/goose"
 	"os"
 	"path"
-	"strings"
 )
 
 const (
@@ -166,11 +165,12 @@ func ResolveMigrationsDirectrory() string {
 		migrationDir = path.Dir(ex) + "/" + migrationDir
 	}
 	if utils.EnvMigrationPath != "" {
-		if strings.HasSuffix(utils.EnvMigrationPath, "/") {
+		/*if strings.HasSuffix(utils.EnvMigrationPath, "/") {
 			migrationDir = utils.EnvMigrationPath + migrationDir
 		} else {
 			migrationDir = utils.EnvMigrationPath + "/" + migrationDir
-		}
+		}*/
+		return utils.EnvMigrationPath
 	}
 	return migrationDir
 }
