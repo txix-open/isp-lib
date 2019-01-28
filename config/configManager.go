@@ -3,14 +3,17 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
 	"reflect"
+	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/doublerebel/bellows"
 	"github.com/fsnotify/fsnotify"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/utils"
@@ -19,7 +22,8 @@ import (
 )
 
 const (
-	EnvPrefix = "isp"
+	LocalConfigEnvPrefix  = "LC_ISP"
+	RemoteConfigEnvPrefix = "RC_ISP_"
 )
 
 var (
@@ -36,7 +40,7 @@ var (
 func init() {
 	ex, _ := os.Executable()
 
-	viper.SetEnvPrefix(EnvPrefix)
+	viper.SetEnvPrefix(LocalConfigEnvPrefix)
 	viper.AutomaticEnv()
 
 	envConfigName := "config"
@@ -81,7 +85,11 @@ func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface
 }
 
 func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{} {
-	if err := json.Unmarshal([]byte(remoteConfig), configuration); err == nil {
+	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
+	if err != nil {
+		logger.Fatal("Could not override remote configuration", err)
+	}
+	if err := json.Unmarshal([]byte(remoteConfig), newRemoteConfig); err == nil {
 		validateRemoteConfig(configuration)
 		remoteConfigInstance = configuration
 	} else {
@@ -196,4 +204,43 @@ func logError(fatal bool, fmt string, args ...interface{}) {
 	} else {
 		logger.Errorf(fmt, args...)
 	}
+}
+
+func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) {
+	overrides := getEnvOverrides(envPrefix)
+	if len(overrides) == 0 {
+		return src, nil
+	}
+
+	m := make(map[string]interface{})
+	err := json.Unmarshal([]byte(src), &m)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal to map: %v", err)
+	}
+
+	m = bellows.Flatten(m)
+	flattenMap := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		flattenMap[strings.ToLower(k)] = v
+	}
+
+	for path, val := range overrides {
+		if oldValue, ok := flattenMap[path]; ok && oldValue != nil {
+			if newValue, err := castString(reflect.TypeOf(oldValue), val); err != nil {
+				logger.Warnf("Could not override remote config variable %s, new value: %v, err: %v", path, val, err)
+			} else {
+				flattenMap[path] = newValue
+			}
+		} else {
+			flattenMap[path] = val
+		}
+	}
+
+	expandedMap := bellows.Expand(flattenMap)
+	bytes, err := json.Marshal(expandedMap)
+	if err != nil {
+		return "", fmt.Errorf("marhal to json: %v", err)
+	}
+
+	return string(bytes), nil
 }

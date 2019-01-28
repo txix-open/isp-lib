@@ -26,6 +26,14 @@
   version = "v0.1.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:b0ddbad880d26589b9de3934e4d149ef8e0db27b4aab873304dd17350818f29d"
+  name = "github.com/doublerebel/bellows"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f177d92a03d33226a1e1777e4b3a5d824bd2598f"
+
+[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -629,6 +637,7 @@
   input-imports = [
     "github.com/asaskevich/govalidator",
     "github.com/buaazp/fasthttprouter",
+    "github.com/doublerebel/bellows",
     "github.com/fsnotify/fsnotify",
     "github.com/go-pg/pg",
     "github.com/go-pg/pg/orm",
