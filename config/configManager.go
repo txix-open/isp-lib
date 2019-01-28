@@ -89,7 +89,7 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 	if err != nil {
 		logger.Fatal("Could not override remote configuration", err)
 	}
-	if err := json.Unmarshal([]byte(remoteConfig), newRemoteConfig); err == nil {
+	if err := json.Unmarshal([]byte(newRemoteConfig), configuration); err == nil {
 		validateRemoteConfig(configuration)
 		remoteConfigInstance = configuration
 	} else {
