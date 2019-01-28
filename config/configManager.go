@@ -23,7 +23,7 @@ import (
 
 const (
 	LocalConfigEnvPrefix  = "LC_ISP"
-	RemoteConfigEnvPrefix = "RC_ISP_"
+	RemoteConfigEnvPrefix = "RC_ISP"
 )
 
 var (
@@ -207,6 +207,7 @@ func logError(fatal bool, fmt string, args ...interface{}) {
 }
 
 func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) {
+	envPrefix = envPrefix + "_"
 	overrides := getEnvOverrides(envPrefix)
 	if len(overrides) == 0 {
 		return src, nil
