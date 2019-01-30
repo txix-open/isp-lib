@@ -1,13 +1,8 @@
 package http
 
 import (
-	"github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 	"time"
-)
-
-var (
-	json = jsoniter.ConfigDefault
 )
 
 type JsonRestClient struct {
