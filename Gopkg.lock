@@ -34,14 +34,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:b0ddbad880d26589b9de3934e4d149ef8e0db27b4aab873304dd17350818f29d"
-  name = "github.com/doublerebel/bellows"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "f177d92a03d33226a1e1777e4b3a5d824bd2598f"
-
-[[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -188,6 +180,14 @@
   pruneopts = "UT"
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:471f4533f0eef4b4ed8589979dbcc3ddf9adcae4deae155f8b2ba519304d98ea"
+  name = "github.com/integration-system/bellows"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4c8f91b7fb44f44098117e503c54768dc14eddfe"
 
 [[projects]]
   branch = "master"
@@ -682,7 +682,6 @@
   input-imports = [
     "github.com/asaskevich/govalidator",
     "github.com/buaazp/fasthttprouter",
-    "github.com/doublerebel/bellows",
     "github.com/fsnotify/fsnotify",
     "github.com/go-pg/pg",
     "github.com/go-pg/pg/orm",
@@ -693,6 +692,7 @@
     "github.com/googollee/go-socket.io",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
+    "github.com/integration-system/bellows",
     "github.com/integration-system/go-cmp/cmp",
     "github.com/integration-system/golang-socketio",
     "github.com/integration-system/gowsdl/soap",

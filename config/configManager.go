@@ -13,8 +13,8 @@ import (
 	"syscall"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/doublerebel/bellows"
 	"github.com/fsnotify/fsnotify"
+	"github.com/integration-system/bellows"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/utils"
 	"github.com/mohae/deepcopy"
