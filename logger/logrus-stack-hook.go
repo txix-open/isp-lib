@@ -37,7 +37,7 @@ func (hook logrusStackHook) Fire(entry *logrus.Entry) error {
 		return nil
 	}
 
-	frames := callers(9)
+	frames := callers(10)
 	hasFrames := len(frames) > 0
 	if printCaller && hasFrames {
 		entry.Data["caller"] = frames[0]
