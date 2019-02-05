@@ -128,13 +128,14 @@ type JsonUnmarshaler struct {
 	unmarshal  func(bytes []byte, ptr interface{}) error
 	onError    func(err error)
 	goroutines int
-	closer     sync.Once
+	wg         sync.WaitGroup
 }
 
 func (u *JsonUnmarshaler) Map(src chan interface{}) chan interface{} {
 	ch := make(chan interface{})
 
 	for i := 0; i < u.goroutines; i++ {
+		u.wg.Add(1)
 		go func() {
 			for val := range src {
 				if val == nil {
@@ -152,12 +153,14 @@ func (u *JsonUnmarshaler) Map(src chan interface{}) chan interface{} {
 					u.onError(fmt.Errorf("jsonUnmarshaler: expecting []byte, got: %v", reflect.TypeOf(val).String()))
 				}
 			}
-
-			u.closer.Do(func() {
-				close(ch)
-			})
+			u.wg.Done()
 		}()
 	}
+
+	go func() {
+		u.wg.Wait()
+		close(ch)
+	}()
 
 	return ch
 }
