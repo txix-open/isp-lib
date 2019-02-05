@@ -43,7 +43,7 @@ func (s *LineScanner) Run() []Result {
 	for i := 0; true; i++ {
 		fileName := fmt.Sprintf(s.filePattern, i)
 		file, err := os.Open(fileName)
-		if err == os.ErrNotExist {
+		if os.IsNotExist(err) {
 			close(s.ch)
 			break
 		} else if err != nil {
