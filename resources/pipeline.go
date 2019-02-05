@@ -19,7 +19,7 @@ type Pipe interface {
 }
 
 type Result struct {
-	Errors      map[int]string `json:"omitempty"`
+	Errors      map[int]string `json:",omitempty"`
 	Lines       int
 	ErrorsCount int
 	FileName    string
