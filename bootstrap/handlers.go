@@ -19,7 +19,7 @@ func handleRemoteConfiguration(remoteConfigChan chan string, event string) func(
 
 func handleError(onSocketErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args map[string]interface{}) error {
 	return func(c *gosocketio.Channel, args map[string]interface{}) error {
-		logger.Infof("--- Got event: %s message: %s", utils.ErrorConnection, args)
+		logger.Infof("--- Got event: %s message: %s", event, args)
 		callFunc(onSocketErrorReceive, args)
 		return nil
 	}
@@ -27,7 +27,7 @@ func handleError(onSocketErrorReceive *reflect.Value, event string) func(c *goso
 
 func handleConfigError(onConfigErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args string) error {
 	return func(c *gosocketio.Channel, args string) error {
-		logger.Infof("--- Got event: %s message: %s", utils.ConfigError, args)
+		logger.Infof("--- Got event: %s message: %s", event, args)
 		callFunc(onConfigErrorReceive, args)
 		return nil
 	}
