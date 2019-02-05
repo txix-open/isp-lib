@@ -101,8 +101,9 @@ func (s *LineScanner) Skip(lineCount int) *LineScanner {
 	return s
 }
 
-func (s *LineScanner) Reader(makeReader func(f *os.File) (io.Reader, error)) {
+func (s *LineScanner) Reader(makeReader func(f *os.File) (io.Reader, error)) *LineScanner {
 	s.makeReader = makeReader
+	return s
 }
 
 func (s *LineScanner) Lines() chan interface{} {
