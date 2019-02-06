@@ -33,6 +33,10 @@ const (
 	mdmConverterConvertErlBatch     = "mdm-converter/erl/convert_batch"
 	mdmConverterConvertErlBatchList = "mdm-converter/erl/convert_batch_list"
 
+	mdmConverterFilterData          = "mdm-converter/data/filter"
+	mdmConverterFilterDataBatch     = "mdm-converter/data/filter_batch"
+	mdmConverterFilterDataBatchList = "mdm-converter/data/filter_batch_list"
+
 	mdmSearchSearchRecords = "mdm-search/record/search"
 )
 
