@@ -90,6 +90,21 @@ var (
 			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
 		},
 	}
+	MdmDumperLinks = MdmDumperService{
+		MdmConverterService: struct {
+			ConvertToSudirBatchList string
+			ConvertToFindBatchList  string
+			ConvertAnyBatchList     string
+			ConvertErlBatchList     string
+			FilterBatchList         string
+		}{
+			ConvertToSudirBatchList: mdmConverterConvertToSudirBatchList,
+			ConvertToFindBatchList:  mdmConverterConvertToFindBatchList,
+			ConvertAnyBatchList:     mdmConverterConvertAnyBatchList,
+			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
+			FilterBatchList:         mdmConverterFilterDataBatchList,
+		},
+	}
 	BackendLinks = AnyBackendServiceLinks{
 		ConfigService: struct{ UpdateRemoteConfig string }{UpdateRemoteConfig: configServiceUpdateRemoteConfig},
 	}

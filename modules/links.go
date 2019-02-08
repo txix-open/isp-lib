@@ -66,3 +66,13 @@ type MdmApiServiceLinks struct {
 		Search string
 	}
 }
+
+type MdmDumperService struct {
+	MdmConverterService struct {
+		ConvertToSudirBatchList string
+		ConvertToFindBatchList  string
+		ConvertAnyBatchList     string
+		ConvertErlBatchList     string
+		FilterBatchList         string
+	}
+}
