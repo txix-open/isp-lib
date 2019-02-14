@@ -11,7 +11,7 @@ const (
 	defaultSampleSize = 2048
 )
 
-type methodMetrics struct {
+type MethodMetrics struct {
 	prefix   string
 	registry metrics.Registry
 
@@ -21,7 +21,7 @@ type methodMetrics struct {
 	statusLock       sync.RWMutex
 }
 
-func (mm *methodMetrics) CatchMetric(method string, dur time.Duration, err error) {
+func (mm *MethodMetrics) CatchMetric(method string, dur time.Duration, err error) {
 	if err != nil {
 		mm.getOrRegisterErrorCounter(method).Inc(1)
 	} else {
@@ -30,7 +30,7 @@ func (mm *methodMetrics) CatchMetric(method string, dur time.Duration, err error
 	}
 }
 
-func (mm *methodMetrics) getOrRegisterHistogram(method string) metrics.Histogram {
+func (mm *MethodMetrics) getOrRegisterHistogram(method string) metrics.Histogram {
 	mm.methodLock.RLock()
 	histogram, ok := mm.methodHistograms[method]
 	mm.methodLock.RUnlock()
@@ -52,7 +52,7 @@ func (mm *methodMetrics) getOrRegisterHistogram(method string) metrics.Histogram
 	return histogram
 }
 
-func (mm *methodMetrics) getOrRegisterErrorCounter(method string) metrics.Counter {
+func (mm *MethodMetrics) getOrRegisterErrorCounter(method string) metrics.Counter {
 	mm.statusLock.RLock()
 	d, ok := mm.errorsCounter[method]
 	mm.statusLock.RUnlock()
@@ -70,8 +70,8 @@ func (mm *methodMetrics) getOrRegisterErrorCounter(method string) metrics.Counte
 	return d
 }
 
-func NewMethodMetrcis(metricsPrefix string, registry metrics.Registry) *methodMetrics {
-	return &methodMetrics{
+func NewMethodMetrcis(metricsPrefix string, registry metrics.Registry) *MethodMetrics {
+	return &MethodMetrics{
 		prefix:           metricsPrefix,
 		registry:         registry,
 		methodHistograms: make(map[string]metrics.Histogram),
