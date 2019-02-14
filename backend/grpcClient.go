@@ -28,6 +28,8 @@ type InternalGrpcClient struct {
 	clients []*client
 	length  int
 	mu      *sync.Mutex
+
+	metricIntercept func(method string, dur time.Duration, err error)
 }
 
 func (bc *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
@@ -42,20 +44,22 @@ func (bc *InternalGrpcClient) Invoke(method string, callerId int, requestBody, r
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 
+	start := time.Now()
 	c := bc.nextConn()
 	msg, err := toBytes(requestBody, ctx)
 	if err != nil {
-		return err
+		return bc.throwMetric(method, start, err)
 	}
 	res, err := c.Request(ctx, msg)
 	if err != nil {
-		return err
+		return bc.throwMetric(method, start, err)
 	}
 	if responsePointer != nil {
-		return readBody(res, responsePointer)
+		err := readBody(res, responsePointer)
+		return bc.throwMetric(method, start, err)
 	}
 
-	return nil
+	return bc.throwMetric(method, start, nil)
 }
 
 func (bc *InternalGrpcClient) Close(errorHandler errorHandler) {
@@ -73,6 +77,11 @@ func (bc *InternalGrpcClient) CloseQuietly() {
 	bc.Close(nil)
 }
 
+func (bc *InternalGrpcClient) WithMetric(catchMetric func(method string, dur time.Duration, err error)) *InternalGrpcClient {
+	bc.metricIntercept = catchMetric
+	return bc
+}
+
 func (bc *InternalGrpcClient) nextConn() isp.BackendServiceClient {
 	if bc.length == 1 {
 		return bc.clients[0]
@@ -83,6 +92,13 @@ func (bc *InternalGrpcClient) nextConn() isp.BackendServiceClient {
 	bc.next = (bc.next + 1) % bc.length
 	bc.mu.Unlock()
 	return sc
+}
+
+func (bc *InternalGrpcClient) throwMetric(method string, start time.Time, err error) error {
+	if bc.metricIntercept != nil {
+		bc.metricIntercept(method, time.Since(start), err)
+	}
+	return err
 }
 
 func NewGrpcClient(addr string, options ...grpc.DialOption) (*InternalGrpcClient, error) {

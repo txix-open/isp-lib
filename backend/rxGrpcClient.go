@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"sort"
 	"sync"
+	"time"
 )
 
 type RxOption func(rc *RxGrpcClient)
@@ -17,6 +18,8 @@ type RxGrpcClient struct {
 	lastRoutersList []string
 	eh              errorHandler
 	options         []grpc.DialOption
+
+	metricIntercept func(method string, dur time.Duration, err error)
 }
 
 func (rc *RxGrpcClient) ReceiveAddressList(list []structure.AddressConfiguration) bool {
@@ -43,6 +46,7 @@ func (rc *RxGrpcClient) ReceiveAddressList(list []structure.AddressConfiguration
 				rc.eh(err)
 			}
 		} else {
+			c.WithMetric(rc.metricIntercept)
 			rc.InternalGrpcClient = c
 		}
 		rc.lastRoutersList = addrList
@@ -90,5 +94,11 @@ func WithDialOptions(opts ...grpc.DialOption) RxOption {
 func WithDialingErrorHandler(eh errorHandler) RxOption {
 	return func(rc *RxGrpcClient) {
 		rc.eh = eh
+	}
+}
+
+func WithMetric(catchMetric func(method string, dur time.Duration, err error)) RxOption {
+	return func(rc *RxGrpcClient) {
+		rc.metricIntercept = catchMetric
 	}
 }
