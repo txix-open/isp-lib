@@ -35,10 +35,10 @@ func TestRemoteConfigOverride(t *testing.T) {
 		panic(err)
 	}
 
-	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_A", "test2"))
-	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_B", "2"))
-	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_C", "false"))
-	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_D.CAMELCASE", "test2"))
+	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_A", "test2#{string}"))
+	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_B", "2#{int}"))
+	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_C", "false#{bool}"))
+	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_D.CAMELCASE", "test2#{string}"))
 
 	ptr := InitRemoteConfig(&original, string(bytes)).(*Config)
 	original = *ptr

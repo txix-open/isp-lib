@@ -3,31 +3,50 @@ package config
 import (
 	"errors"
 	"os"
-	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-func castString(resultType reflect.Type, value string) (interface{}, error) {
-	switch resultType.Kind() {
-	case reflect.String:
-		return value, nil
-	case
-		reflect.Int,
-		reflect.Int8,
-		reflect.Int16,
-		reflect.Int32,
-		reflect.Int64:
-		return strconv.Atoi(value)
-	case reflect.Float32:
-		return strconv.ParseFloat(value, 32)
-	case reflect.Float64:
-		return strconv.ParseFloat(value, 64)
-	case reflect.Bool:
-		return strconv.ParseBool(value)
+type PropertyType string
+
+var (
+	valueTypeRegexp = regexp.MustCompile("#\\{\\w*\\}")
+)
+
+const (
+	Int     PropertyType = "int"
+	Bool    PropertyType = "bool"
+	Float32 PropertyType = "float32"
+	Float64 PropertyType = "float64"
+	String  PropertyType = "string"
+)
+
+func castString(value string) (interface{}, error) {
+	v, t := getValueAndType(value)
+	switch t {
+	case String:
+		return v, nil
+	case Int:
+		return strconv.Atoi(v)
+	case Float32:
+		return strconv.ParseFloat(v, 32)
+	case Float64:
+		return strconv.ParseFloat(v, 64)
+	case Bool:
+		return strconv.ParseBool(v)
 	default:
 		return nil, errors.New("unknown primitive type")
 	}
+}
+
+func getValueAndType(value string) (string, PropertyType) {
+	t := String
+	v := valueTypeRegexp.ReplaceAllStringFunc(value, func(s string) string {
+		t = PropertyType(s[2 : len(s)-1])
+		return ""
+	})
+	return v, t
 }
 
 func getEnvOverrides(envPrefix string) map[string]string {
