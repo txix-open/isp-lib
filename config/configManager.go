@@ -226,14 +226,10 @@ func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) 
 	}
 
 	for path, val := range overrides {
-		if oldValue, ok := flattenMap[path]; ok && oldValue != nil {
-			if newValue, err := castString(val); err != nil {
-				logger.Warnf("Could not override remote config variable %s, new value: %v, err: %v", path, val, err)
-			} else {
-				flattenMap[path] = newValue
-			}
+		if newValue, err := castString(val); err != nil {
+			logger.Warnf("Could not override remote config variable %s, new value: %v, err: %v", path, val, err)
 		} else {
-			flattenMap[path] = val
+			flattenMap[path] = newValue
 		}
 	}
 
