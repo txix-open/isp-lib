@@ -183,11 +183,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:471f4533f0eef4b4ed8589979dbcc3ddf9adcae4deae155f8b2ba519304d98ea"
+  digest = "1:7edb99b124d77ae909910e2ba563fbe652e9596f5798bd10f67fd66ba0fa9c82"
   name = "github.com/integration-system/bellows"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4c8f91b7fb44f44098117e503c54768dc14eddfe"
+  revision = "3f9681649fb950d5ccbb9e90843ef860696e78d0"
 
 [[projects]]
   branch = "master"
