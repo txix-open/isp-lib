@@ -49,10 +49,10 @@ func toDesc(handler interface{}) (*funcDesc, error) {
 	fd := &funcDesc{f: rv, headersNum: -1, bodyNum: -1, ctxNum: -1}
 	for i := 0; i < rt.NumIn(); i++ {
 		inParam := rt.In(i)
-		if inParam.Kind() == reflect.Map && fd.headersNum == -1 {
+		/*if inParam.Kind() == reflect.Map && fd.headersNum == -1 {
 			fd.headersNum = i
 			fd.inCount++
-		} else if inParam == ctxType && fd.ctxNum == -1 {
+		} else*/if inParam == ctxType && fd.ctxNum == -1 {
 			fd.ctxNum = i
 			fd.inCount++
 		} else if fd.bodyNum == -1 {
