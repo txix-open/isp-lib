@@ -54,13 +54,16 @@ type MdmNotifyLinks struct {
 
 type MdmApiServiceLinks struct {
 	MdmService struct {
-		GetRecord string
+		GetRecord     string
+		GetAttributes string
 	}
 	MdmConverterService struct {
 		ConvertToSudir               string
 		ConvertToFind                string
 		ConvertSearchRequestForSudir string
 		ConvertSearchRequestForFind  string
+
+		FilterAttributes string
 	}
 	MdmSearchService struct {
 		Search string

@@ -12,6 +12,7 @@ const (
 	mdmGetRecord         = "mdm/data/get_record_by_external_id"
 	mdmHandleRecord      = "mdm/data/handle_record_update"
 	mdmHandleRecordBatch = "mdm/data/handle_record_update_batch"
+	mdmGetAttributes     = "mdm/attribute/get_all"
 
 	mdmNotificationBroadcast = "mdm-notifier/notification/send"
 
@@ -36,6 +37,8 @@ const (
 	mdmConverterFilterData          = "mdm-converter/data/filter"
 	mdmConverterFilterDataBatch     = "mdm-converter/data/filter_batch"
 	mdmConverterFilterDataBatchList = "mdm-converter/data/filter_batch_list"
+
+	mdmConverterFilterAttributes = "mdm-converter/attribute/filter"
 
 	mdmSearchSearchRecords = "mdm-search/record/search"
 )
@@ -63,17 +66,27 @@ var (
 		MdmNotifierService: struct{ BroadcastNotification string }{BroadcastNotification: mdmNotificationBroadcast},
 	}
 	MdmApiLinks = MdmApiServiceLinks{
-		MdmService: struct{ GetRecord string }{GetRecord: mdmGetRecord},
+		MdmService: struct {
+			GetRecord     string
+			GetAttributes string
+		}{
+			GetRecord:     mdmGetRecord,
+			GetAttributes: mdmGetAttributes,
+		},
 		MdmConverterService: struct {
 			ConvertToSudir               string
 			ConvertToFind                string
 			ConvertSearchRequestForSudir string
 			ConvertSearchRequestForFind  string
+
+			FilterAttributes string
 		}{
 			ConvertToSudir:               mdmConverterConvertToSudir,
 			ConvertToFind:                mdmConverterConvertToFind,
 			ConvertSearchRequestForSudir: mdmConverterConvertSearchRequestForSudir,
 			ConvertSearchRequestForFind:  mdmConverterConvertSearchRequestForFind,
+
+			FilterAttributes: mdmConverterFilterAttributes,
 		},
 		MdmSearchService: struct{ Search string }{Search: mdmSearchSearchRecords},
 	}
