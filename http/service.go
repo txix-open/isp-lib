@@ -331,6 +331,11 @@ func callF(fd *funcDesc, params []reflect.Value) (interface{}, error) {
 		if !v.IsValid() {
 			continue
 		}
+		if v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				continue
+			}
+		}
 		if e, ok := v.Interface().(error); ok && err == nil {
 			err = e
 			continue
