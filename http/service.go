@@ -328,6 +328,9 @@ func callF(fd *funcDesc, params []reflect.Value) (interface{}, error) {
 	var err error
 	for i := 0; i < l; i++ {
 		v := res[i]
+		if !v.IsValid() {
+			continue
+		}
 		if e, ok := v.Interface().(error); ok && err == nil {
 			err = e
 			continue
