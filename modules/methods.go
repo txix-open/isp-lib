@@ -10,6 +10,7 @@ const (
 	configServiceUpdateRemoteConfig = "config/config/update_active_config_by_instance_uuid_and_module_name"
 
 	mdmGetRecord         = "mdm/data/get_record_by_external_id"
+	mdmGetRecordList     = "mdm/data/get_records_list"
 	mdmHandleRecord      = "mdm/data/handle_record_update"
 	mdmHandleRecordBatch = "mdm/data/handle_record_update_batch"
 	mdmGetAttributes     = "mdm/attribute/get_all"
@@ -41,6 +42,7 @@ const (
 	mdmConverterFilterAttributes = "mdm-converter/attribute/filter"
 
 	mdmSearchSearchRecords = "mdm-search/record/search"
+	mdmSearchSearchIdList  = "mdm-search/record/search_id_list"
 )
 
 var (
@@ -67,11 +69,13 @@ var (
 	}
 	MdmApiLinks = MdmApiServiceLinks{
 		MdmService: struct {
-			GetRecord     string
-			GetAttributes string
+			GetRecord      string
+			GetAttributes  string
+			GetRecordsList string
 		}{
-			GetRecord:     mdmGetRecord,
-			GetAttributes: mdmGetAttributes,
+			GetRecord:      mdmGetRecord,
+			GetAttributes:  mdmGetAttributes,
+			GetRecordsList: mdmGetRecordList,
 		},
 		MdmConverterService: struct {
 			ConvertToSudir               string
@@ -88,7 +92,13 @@ var (
 
 			FilterAttributes: mdmConverterFilterAttributes,
 		},
-		MdmSearchService: struct{ Search string }{Search: mdmSearchSearchRecords},
+		MdmSearchService: struct {
+			Search       string
+			SearchIdList string
+		}{
+			Search:       mdmSearchSearchRecords,
+			SearchIdList: mdmSearchSearchIdList,
+		},
 	}
 	MdmNotifierLinks = MdmNotifyLinks{
 		MdmConverterService: struct {
