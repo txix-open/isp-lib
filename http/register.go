@@ -87,7 +87,8 @@ func registerControllers(register func(uri, action string, mType MType, handler 
 				mType := MType(t)
 				if mType != "" && mType != RestMType && mType != SoapMType {
 					return fmt.Errorf("Unknown type: %s", mType)
-				} else {
+				}
+				if mType == "" {
 					mType = SoapMType
 				}
 				if val.IsNil() {
