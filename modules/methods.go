@@ -43,7 +43,7 @@ const (
 
 	mdmSearchSearchRecords      = "mdm-search/record/search"
 	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
-	mdmSearchSearchIdWithCursor = "mdm-search/record/search_id_with_cursor"
+	mdmSearchSearchIdWithScroll = "mdm-search/record/search_id_with_scroll"
 )
 
 var (
@@ -144,9 +144,9 @@ var (
 			FilterBatchList:         mdmConverterFilterDataBatchList,
 		},
 		MdmSearchService: struct {
-			SearchIdWithCursor string
+			SearchIdWithScroll string
 		}{
-			SearchIdWithCursor: mdmSearchSearchIdWithCursor,
+			SearchIdWithScroll: mdmSearchSearchIdWithScroll,
 		},
 	}
 	BackendLinks = AnyBackendServiceLinks{

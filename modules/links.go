@@ -91,6 +91,6 @@ type MdmAsyncApiService struct {
 		FilterBatchList         string
 	}
 	MdmSearchService struct {
-		SearchIdWithCursor string
+		SearchIdWithScroll string
 	}
 }
