@@ -70,7 +70,7 @@ func (mm *MethodMetrics) getOrRegisterErrorCounter(method string) metrics.Counte
 	return d
 }
 
-func NewMethodMetrcis(metricsPrefix string, registry metrics.Registry) *MethodMetrics {
+func NewMethodMetrics(metricsPrefix string, registry metrics.Registry) *MethodMetrics {
 	return &MethodMetrics{
 		prefix:           metricsPrefix,
 		registry:         registry,
