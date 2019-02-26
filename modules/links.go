@@ -81,3 +81,16 @@ type MdmDumperService struct {
 		FilterBatchList         string
 	}
 }
+
+type MdmAsyncApiService struct {
+	MdmConverterService struct {
+		ConvertToSudirBatchList string
+		ConvertToFindBatchList  string
+		ConvertAnyBatchList     string
+		ConvertErlBatchList     string
+		FilterBatchList         string
+	}
+	MdmSearchService struct {
+		SearchIdWithCursor string
+	}
+}

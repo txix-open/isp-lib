@@ -41,8 +41,9 @@ const (
 
 	mdmConverterFilterAttributes = "mdm-converter/attribute/filter"
 
-	mdmSearchSearchRecords = "mdm-search/record/search"
-	mdmSearchSearchIdList  = "mdm-search/record/search_id_list"
+	mdmSearchSearchRecords      = "mdm-search/record/search"
+	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
+	mdmSearchSearchIdWithCursor = "mdm-search/record/search_id_with_cursor"
 )
 
 var (
@@ -126,6 +127,26 @@ var (
 			ConvertAnyBatchList:     mdmConverterConvertAnyBatchList,
 			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
 			FilterBatchList:         mdmConverterFilterDataBatchList,
+		},
+	}
+	MdmAsyncApiLinks = MdmAsyncApiService{
+		MdmConverterService: struct {
+			ConvertToSudirBatchList string
+			ConvertToFindBatchList  string
+			ConvertAnyBatchList     string
+			ConvertErlBatchList     string
+			FilterBatchList         string
+		}{
+			ConvertToSudirBatchList: mdmConverterConvertToSudirBatchList,
+			ConvertToFindBatchList:  mdmConverterConvertToFindBatchList,
+			ConvertAnyBatchList:     mdmConverterConvertAnyBatchList,
+			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
+			FilterBatchList:         mdmConverterFilterDataBatchList,
+		},
+		MdmSearchService: struct {
+			SearchIdWithCursor string
+		}{
+			SearchIdWithCursor: mdmSearchSearchIdWithCursor,
 		},
 	}
 	BackendLinks = AnyBackendServiceLinks{

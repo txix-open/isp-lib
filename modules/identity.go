@@ -25,4 +25,5 @@ const (
 	MdmConverterModuleId = -21
 	MdmSearchModuleId    = -22
 	MdmDumperModuleId    = -23
+	MdmAyncApiModuleId   = -24
 )
