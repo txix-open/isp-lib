@@ -44,6 +44,8 @@ const (
 	mdmSearchSearchRecords      = "mdm-search/record/search"
 	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
 	mdmSearchSearchIdWithScroll = "mdm-search/record/search_id_with_scroll"
+
+	mdtSearchPreferredSlices = "mdm-search/manage/preferred_slices_count"
 )
 
 var (
@@ -144,9 +146,11 @@ var (
 			FilterBatchList:         mdmConverterFilterDataBatchList,
 		},
 		MdmSearchService: struct {
-			SearchIdWithScroll string
+			SearchIdWithScroll   string
+			PreferredSlicesCount string
 		}{
-			SearchIdWithScroll: mdmSearchSearchIdWithScroll,
+			SearchIdWithScroll:   mdmSearchSearchIdWithScroll,
+			PreferredSlicesCount: mdtSearchPreferredSlices,
 		},
 	}
 	BackendLinks = AnyBackendServiceLinks{
