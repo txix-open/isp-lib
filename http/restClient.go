@@ -3,9 +3,7 @@ package http
 import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/struct"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"net/http"
 )
 
 const (
