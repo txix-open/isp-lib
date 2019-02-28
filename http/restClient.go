@@ -3,15 +3,40 @@ package http
 import (
 	"fmt"
 	"github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
-	"google.golang.org/grpc/codes"
 )
 
 const (
 	POST = "POST"
 	GET  = "GET"
 )
+
+var (
+	codeMap = map[int]codes.Code{
+		http.StatusOK:                  codes.OK,
+		http.StatusRequestTimeout:      codes.Canceled,
+		http.StatusBadRequest:          codes.InvalidArgument,
+		http.StatusGatewayTimeout:      codes.DeadlineExceeded,
+		http.StatusNotFound:            codes.NotFound,
+		http.StatusConflict:            codes.AlreadyExists,
+		http.StatusForbidden:           codes.PermissionDenied,
+		http.StatusUnauthorized:        codes.Unauthenticated,
+		http.StatusTooManyRequests:     codes.ResourceExhausted,
+		http.StatusPreconditionFailed:  codes.FailedPrecondition,
+		http.StatusNotImplemented:      codes.Unimplemented,
+		http.StatusInternalServerError: codes.Internal,
+		http.StatusServiceUnavailable:  codes.Unavailable,
+	}
+	inverseCodeMap = map[codes.Code]int{}
+)
+
+func init() {
+	for httpCode, grpcCode := range codeMap {
+		inverseCodeMap[grpcCode] = httpCode
+	}
+}
 
 type ErrorResponse struct {
 	StatusCode int
@@ -41,34 +66,17 @@ type RestClient interface {
 }
 
 func HttpStatusToCode(status int) codes.Code {
-	switch status {
-	case http.StatusOK:
-		return codes.OK
-	case http.StatusRequestTimeout:
-		return codes.Canceled
-	case http.StatusBadRequest:
-		return codes.InvalidArgument
-	case http.StatusGatewayTimeout:
-		return codes.DeadlineExceeded
-	case http.StatusNotFound:
-		return codes.NotFound
-	case http.StatusConflict:
-		return codes.AlreadyExists
-	case http.StatusForbidden:
-		return codes.PermissionDenied
-	case http.StatusUnauthorized:
-		return codes.Unauthenticated
-	case http.StatusTooManyRequests:
-		return codes.ResourceExhausted
-	case http.StatusPreconditionFailed:
-		return codes.FailedPrecondition
-	case http.StatusNotImplemented:
-		return codes.Unimplemented
-	case http.StatusInternalServerError:
-		return codes.Internal
-	case http.StatusServiceUnavailable:
-		return codes.Unavailable
-	default:
-		return codes.Internal
+	code, ok := codeMap[status]
+	if !ok {
+		return codes.Unknown
 	}
+	return code
+}
+
+func CodeToHttpStatus(code codes.Code) int {
+	status, ok := inverseCodeMap[code]
+	if !ok {
+		return http.StatusInternalServerError
+	}
+	return status
 }
