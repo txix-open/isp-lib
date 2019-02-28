@@ -54,9 +54,10 @@ type MdmNotifyLinks struct {
 
 type MdmApiServiceLinks struct {
 	MdmService struct {
-		GetRecord      string
-		GetAttributes  string
-		GetRecordsList string
+		GetRecord           string
+		GetAttributes       string
+		GetRecordsList      string
+		GetByExternalIdList string
 	}
 	MdmConverterService struct {
 		ConvertToSudir               string

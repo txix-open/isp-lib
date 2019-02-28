@@ -9,11 +9,12 @@ const (
 
 	configServiceUpdateRemoteConfig = "config/config/update_active_config_by_instance_uuid_and_module_name"
 
-	mdmGetRecord         = "mdm/data/get_record_by_external_id"
-	mdmGetRecordList     = "mdm/data/get_records_list"
-	mdmHandleRecord      = "mdm/data/handle_record_update"
-	mdmHandleRecordBatch = "mdm/data/handle_record_update_batch"
-	mdmGetAttributes     = "mdm/attribute/get_all"
+	mdmGetRecord           = "mdm/data/get_record_by_external_id"
+	mdmGetRecordList       = "mdm/data/get_records_list"
+	mdmHandleRecord        = "mdm/data/handle_record_update"
+	mdmHandleRecordBatch   = "mdm/data/handle_record_update_batch"
+	mdmGetAttributes       = "mdm/attribute/get_all"
+	mdmGetByExternalIdList = "mdm/data/get_by_external_id_list"
 
 	mdmNotificationBroadcast = "mdm-notifier/notification/send"
 
@@ -72,13 +73,15 @@ var (
 	}
 	MdmApiLinks = MdmApiServiceLinks{
 		MdmService: struct {
-			GetRecord      string
-			GetAttributes  string
-			GetRecordsList string
+			GetRecord           string
+			GetAttributes       string
+			GetRecordsList      string
+			GetByExternalIdList string
 		}{
-			GetRecord:      mdmGetRecord,
-			GetAttributes:  mdmGetAttributes,
-			GetRecordsList: mdmGetRecordList,
+			GetRecord:           mdmGetRecord,
+			GetAttributes:       mdmGetAttributes,
+			GetRecordsList:      mdmGetRecordList,
+			GetByExternalIdList: mdmGetByExternalIdList,
 		},
 		MdmConverterService: struct {
 			ConvertToSudir               string
