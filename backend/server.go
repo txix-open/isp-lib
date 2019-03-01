@@ -88,10 +88,12 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 		logger.Fatalf("failed to serve: %v", err)
 	}
 
-	StartBackendGrpcServerOn(ln, service, opt...)
+	StartBackendGrpcServerOn(addr, ln, service, opt...)
 }
 
-func StartBackendGrpcServerOn(ln net.Listener, service *DefaultService, opt ...grpc.ServerOption) {
+func StartBackendGrpcServerOn(addr structure.AddressConfiguration, ln net.Listener, service *DefaultService, opt ...grpc.ServerOption) {
+	grpcAddress = &addr
+
 	grpcServer := grpc.NewServer(opt...)
 	isp.RegisterBackendServiceServer(grpcServer, service)
 	server = &GrpcServer{grpcServer, service}
