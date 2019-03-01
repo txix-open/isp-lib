@@ -64,6 +64,14 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 		err = utils.Validate(instance)
 		if err != nil {
 			logger.Debug(err)
+			if df.eh != nil {
+				result, err := df.eh(err)
+				msg = emptyBody
+				if result != nil {
+					msg, err = toBytes(result, ctx)
+				}
+				return msg, err
+			}
 			return nil, err
 		}
 	}
