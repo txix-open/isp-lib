@@ -73,14 +73,14 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 	defer lock.Unlock()
 
 	if server != nil {
-		logger.Fatalf("Grpc server has already started at", addr)
+		logger.Fatalf("Grpc server has already started at", grpcAddress)
 	}
 
 	grpcAddress = &addr
 
-	var lis net.Listener
+	var ln net.Listener
 	var err error
-	for lis, err = net.Listen("tcp", grpcAddress.GetAddress()); err != nil; {
+	for ln, err = net.Listen("tcp", grpcAddress.GetAddress()); err != nil; {
 		time.Sleep(time.Second * 3)
 		logger.Warnf("Error grpc connection: %v, try again, err: %v", grpcAddress, err)
 	}
@@ -88,13 +88,17 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 		logger.Fatalf("failed to serve: %v", err)
 	}
 
+	StartBackendGrpcServerOn(ln, service, opt...)
+}
+
+func StartBackendGrpcServerOn(ln net.Listener, service *DefaultService, opt ...grpc.ServerOption) {
 	grpcServer := grpc.NewServer(opt...)
 	isp.RegisterBackendServiceServer(grpcServer, service)
 	server = &GrpcServer{grpcServer, service}
 
 	go func() {
 		logger.Infof("Start backend grpc server on %s", grpcAddress)
-		if err := server.Serve(lis); err != nil {
+		if err := server.Serve(ln); err != nil {
 			logger.Fatalf("failed to serve: %v", err)
 		}
 		logger.Info("Grpc backend server shutdown")

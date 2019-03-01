@@ -92,11 +92,15 @@ func (ss *HttpService) GetHandlersSnapshot() HandlersInfoSnapshot {
 	return makeSnapshot(ss.actions, ss.static)
 }
 
-func (ss *HttpService) Serve(bindingAddress string) error {
+func (ss *HttpService) ListenAndServe(bindingAddress string) error {
 	ln, err := net.Listen("tcp", bindingAddress)
 	if err != nil {
 		return err
 	}
+	return ss.Serve(ln)
+}
+
+func (ss *HttpService) Serve(ln net.Listener) error {
 	return ss.server.Serve(ln)
 }
 
