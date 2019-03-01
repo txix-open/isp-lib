@@ -65,7 +65,7 @@ func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structu
 
 func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
 	funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
-	return &DefaultService{funcs, streams}
+	return &DefaultService{functions: funcs, streamConsumers: streams}
 }
 
 func StartBackendGrpcServer(addr structure.AddressConfiguration, service *DefaultService, opt ...grpc.ServerOption) {
