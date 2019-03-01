@@ -14,6 +14,8 @@ import (
 	"reflect"
 )
 
+type ErrorHandler func(err error) (interface{}, error)
+
 var (
 	metaDataType = reflect.TypeOf(metadata.MD{})
 	emptyBody    = &isp.Message{
@@ -34,6 +36,7 @@ type function struct {
 type DefaultService struct {
 	functions       map[string]function
 	streamConsumers map[string]streaming.StreamConsumer
+	eh              ErrorHandler
 }
 
 func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.Message, error) {
@@ -95,6 +98,10 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 		}
 	}
 
+	if err != nil && df.eh != nil {
+		result, err = df.eh(err)
+	}
+
 	if err != nil {
 		grpcError, mustLog := ResolveError(err)
 		if mustLog {
@@ -125,6 +132,11 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 		return err.Err()
 	}
 	return nil
+}
+
+func (df *DefaultService) WithErrorHandler(eh ErrorHandler) *DefaultService {
+	df.eh = eh
+	return df
 }
 
 func (df *DefaultService) getHandler(ctx context.Context) (*function, metadata.MD, error) {
