@@ -101,9 +101,10 @@ func StartBackendGrpcServerOn(addr structure.AddressConfiguration, ln net.Listen
 	go func() {
 		logger.Infof("Start backend grpc server on %s", grpcAddress.GetAddress())
 		if err := server.Serve(ln); err != nil {
-			logger.Fatalf("failed to serve: %v", err)
+			logger.Warnf("Grpc backend server shutdown with error: %v", err)
+		} else {
+			logger.Info("Grpc backend server shutdown")
 		}
-		logger.Info("Grpc backend server shutdown")
 	}()
 }
 
