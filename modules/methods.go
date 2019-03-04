@@ -46,7 +46,11 @@ const (
 	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
 	mdmSearchSearchIdWithScroll = "mdm-search/record/search_id_with_scroll"
 
-	mdtSearchPreferredSlices = "mdm-search/manage/preferred_slices_count"
+	mdmSearchPreferredSlices = "mdm-search/manage/preferred_slices_count"
+
+	mdmAsyncApiJobCreate              = "mdm-async-api/job/create"
+	mdmAsyncApiJobStatus              = "mdm-async-api/job/status"
+	mdmAsyncApiGetInternalStoreResult = "mdm-async-api/store/get"
 )
 
 var (
@@ -105,6 +109,15 @@ var (
 			Search:       mdmSearchSearchRecords,
 			SearchIdList: mdmSearchSearchIdList,
 		},
+		MdmAsyncApiService: struct {
+			CreateJob              string
+			GetJobStatus           string
+			GetInternalStoreResult string
+		}{
+			CreateJob:              mdmAsyncApiJobCreate,
+			GetJobStatus:           mdmAsyncApiJobStatus,
+			GetInternalStoreResult: mdmAsyncApiGetInternalStoreResult,
+		},
 	}
 	MdmNotifierLinks = MdmNotifyLinks{
 		MdmConverterService: struct {
@@ -135,25 +148,12 @@ var (
 		},
 	}
 	MdmAsyncApiLinks = MdmAsyncApiService{
-		MdmConverterService: struct {
-			ConvertToSudirBatchList string
-			ConvertToFindBatchList  string
-			ConvertAnyBatchList     string
-			ConvertErlBatchList     string
-			FilterBatchList         string
-		}{
-			ConvertToSudirBatchList: mdmConverterConvertToSudirBatchList,
-			ConvertToFindBatchList:  mdmConverterConvertToFindBatchList,
-			ConvertAnyBatchList:     mdmConverterConvertAnyBatchList,
-			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
-			FilterBatchList:         mdmConverterFilterDataBatchList,
-		},
 		MdmSearchService: struct {
 			SearchIdWithScroll   string
 			PreferredSlicesCount string
 		}{
 			SearchIdWithScroll:   mdmSearchSearchIdWithScroll,
-			PreferredSlicesCount: mdtSearchPreferredSlices,
+			PreferredSlicesCount: mdmSearchPreferredSlices,
 		},
 	}
 	BackendLinks = AnyBackendServiceLinks{

@@ -71,6 +71,11 @@ type MdmApiServiceLinks struct {
 		Search       string
 		SearchIdList string
 	}
+	MdmAsyncApiService struct {
+		CreateJob              string
+		GetJobStatus           string
+		GetInternalStoreResult string
+	}
 }
 
 type MdmDumperService struct {
@@ -84,13 +89,6 @@ type MdmDumperService struct {
 }
 
 type MdmAsyncApiService struct {
-	MdmConverterService struct {
-		ConvertToSudirBatchList string
-		ConvertToFindBatchList  string
-		ConvertAnyBatchList     string
-		ConvertErlBatchList     string
-		FilterBatchList         string
-	}
 	MdmSearchService struct {
 		SearchIdWithScroll   string
 		PreferredSlicesCount string
