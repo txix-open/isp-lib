@@ -305,8 +305,10 @@ func (b *runner) sendModuleConfigSchema() {
 	req := schema.ConfigSchema{Version: b.moduleInfo.ModuleVersion, Schema: s}
 	if bytes, err := json.Marshal(req); err != nil {
 		logger.Error("Could not serialize config schema to JSON", err)
-	} else if err := b.client.Emit(utils.ModuleSendConfigSchema, string(bytes)); err != nil {
+	} else if res, err := b.client.Ack(utils.ModuleSendConfigSchema, string(bytes), 3*time.Second); err != nil {
 		logger.Error("Could not send config schema", err)
+	} else {
+		logger.Debugf("Update schema response: %s", res)
 	}
 }
 
