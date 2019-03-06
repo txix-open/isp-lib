@@ -65,7 +65,8 @@ type MdmApiServiceLinks struct {
 		ConvertSearchRequestForSudir string
 		ConvertSearchRequestForFind  string
 
-		FilterAttributes string
+		FilterAttributes    string
+		FilterSearchRequest string
 	}
 	MdmSearchService struct {
 		Search       string

@@ -39,8 +39,8 @@ const (
 	mdmConverterFilterData          = "mdm-converter/data/filter"
 	mdmConverterFilterDataBatch     = "mdm-converter/data/filter_batch"
 	mdmConverterFilterDataBatchList = "mdm-converter/data/filter_batch_list"
-
-	mdmConverterFilterAttributes = "mdm-converter/attribute/filter"
+	mdmConverterFilterAttributes    = "mdm-converter/attribute/filter"
+	mdmConverterFilterSearchRequest = "mdm-converter/search_request/filter"
 
 	mdmSearchSearchRecords      = "mdm-search/record/search"
 	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
@@ -93,14 +93,16 @@ var (
 			ConvertSearchRequestForSudir string
 			ConvertSearchRequestForFind  string
 
-			FilterAttributes string
+			FilterAttributes    string
+			FilterSearchRequest string
 		}{
 			ConvertToSudir:               mdmConverterConvertToSudir,
 			ConvertToFind:                mdmConverterConvertToFind,
 			ConvertSearchRequestForSudir: mdmConverterConvertSearchRequestForSudir,
 			ConvertSearchRequestForFind:  mdmConverterConvertSearchRequestForFind,
 
-			FilterAttributes: mdmConverterFilterAttributes,
+			FilterAttributes:    mdmConverterFilterAttributes,
+			FilterSearchRequest: mdmConverterFilterSearchRequest,
 		},
 		MdmSearchService: struct {
 			Search       string
