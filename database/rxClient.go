@@ -81,7 +81,7 @@ func (rc *RxDbClient) ReceiveConfiguration(config DBConfiguration) {
 				db = pdb
 			}
 
-			if rc.schemaInjecting {
+			if ok && rc.schemaInjecting {
 				db = withSchema(db, config.Schema)
 			}
 		}
