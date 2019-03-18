@@ -24,9 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
-[[constraint]]
-   name = "github.com/valyala/fasthttp"
-   branch = "master"
+[[override]]
+  name = "mellium.im/sasl"
+  source = "https://github.com/mellium/sasl.git"
 
 [prune]
   go-tests = true

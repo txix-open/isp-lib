@@ -117,30 +117,6 @@
   ]
   pruneopts = "UT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
-  version = "v1.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:324591cd9122f94cc39a87bd44ec71153672c239e2cff5743bfad96b60be3749"
-  name = "github.com/googollee/go-engine.io"
-  packages = [
-    ".",
-    "message",
-    "parser",
-    "polling",
-    "transport",
-    "websocket",
-  ]
-  pruneopts = "UT"
-  revision = "e2f255711dcb2ea41e42c6d9d98c172d7edf6509"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f52b53672201cbe96346199cdab5096f1f9c1a607b61209a8ac8dba828dae978"
-  name = "github.com/googollee/go-socket.io"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0ad7206c347a1c531174c35fb3b68be22360a80c"
 
 [[projects]]
   digest = "1:7b5c6e2eeaa9ae5907c391a91c132abfd5c9e8a784a341b5625e750c67e6825d"
@@ -674,6 +650,7 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "e58e780e1378aa4df5dc705364ff5ae9a4dd1e04"
+  source = "https://github.com/mellium/sasl.git"
   version = "v0.2.1"
 
 [solve-meta]
@@ -688,8 +665,6 @@
     "github.com/go-redis/redis",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/struct",
-    "github.com/googollee/go-engine.io",
-    "github.com/googollee/go-socket.io",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/integration-system/bellows",
