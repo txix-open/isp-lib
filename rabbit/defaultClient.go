@@ -2,6 +2,7 @@ package rabbit
 
 import (
 	"github.com/integration-system/isp-lib/logger"
+	"github.com/integration-system/isp-lib/structure"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ func GetDefaultClient() *Client {
 	return client
 }
 
-func InitDefaultClient(cfg RabbitConfig) *Client {
+func InitDefaultClient(cfg structure.RabbitConfig) *Client {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -44,7 +45,7 @@ func InitDefaultClient(cfg RabbitConfig) *Client {
 		c, err := MakeClient(cfg)
 		if err != nil {
 			logger.Warnf("Could not connect to rabbit: %v", err)
-			time.Sleep(cfg.reconnectionTimeout())
+			time.Sleep(cfg.ReconnectionTimeout())
 		} else {
 			client = c
 			connected = true

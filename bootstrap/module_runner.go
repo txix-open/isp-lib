@@ -9,6 +9,7 @@ import (
 	"github.com/integration-system/isp-lib/config/schema"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/metric"
+	"github.com/integration-system/isp-lib/socket"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
 	"github.com/mohae/deepcopy"
@@ -186,7 +187,7 @@ func (b *runner) initSocketConnection() {
 			b.disconnectChan <- struct{}{}
 			return nil
 		}, nil)
-	connectionString := socketConfig.GetConnectionString()
+	connectionString := socket.GetConnectionString(socketConfig)
 	c := builder.BuildToConnect(connectionString)
 
 	if b.onSocketErrorReceive != nil {

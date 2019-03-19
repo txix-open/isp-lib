@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-pg/pg"
 	"github.com/integration-system/go-cmp/cmp"
+	"github.com/integration-system/isp-lib/structure"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ var (
 type ErrorEvent struct {
 	action string
 	err    error
-	config DBConfiguration
+	config structure.DBConfiguration
 }
 
 func (er ErrorEvent) Error() string {
@@ -26,11 +27,11 @@ type errorHandler func(err *ErrorEvent)
 
 type visitor func(db *pg.DB) error
 
-type initHandler func(db *pg.DB, config DBConfiguration)
+type initHandler func(db *pg.DB, config structure.DBConfiguration)
 
 type RxDbClient struct {
 	db       *pg.DB
-	lastConf DBConfiguration
+	lastConf structure.DBConfiguration
 	lock     sync.RWMutex
 	active   bool
 
@@ -41,7 +42,7 @@ type RxDbClient struct {
 	schemaInjecting bool
 }
 
-func (rc *RxDbClient) ReceiveConfiguration(config DBConfiguration) {
+func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 

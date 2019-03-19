@@ -3,32 +3,10 @@ package socket
 import (
 	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/logger"
+	"github.com/integration-system/isp-lib/structure"
 	"strconv"
 	"time"
 )
-
-type SocketConfiguration struct {
-	Host             string
-	Port             string
-	Path             string
-	Secure           bool
-	UrlParams        map[string]string
-	ConnectionString string
-}
-
-func (sc *SocketConfiguration) GetConnectionString() string {
-	connectionString := sc.ConnectionString
-	port, _ := strconv.Atoi(sc.Port)
-	if connectionString == "" {
-		connectionString = gosocketio.GetUrl(
-			sc.Host,
-			port,
-			sc.Secure,
-			sc.UrlParams,
-		)
-	}
-	return connectionString
-}
 
 var socketClient *gosocketio.Client
 
@@ -40,7 +18,7 @@ func GetClient() *gosocketio.Client {
 	return socketClient
 }
 
-func InitClient(socketConfig SocketConfiguration, subscriptions func(client *gosocketio.Client)) *gosocketio.Client {
+func InitClient(socketConfig structure.SocketConfiguration, subscriptions func(client *gosocketio.Client)) *gosocketio.Client {
 	builder := gosocketio.NewClientBuilder().
 		EnableReconnection().
 		ReconnectionTimeout(3*time.Second).
@@ -55,7 +33,7 @@ func InitClient(socketConfig SocketConfiguration, subscriptions func(client *gos
 	if subscriptions != nil {
 		subscriptions(builder.UnsafeClient())
 	}
-	connectionString := socketConfig.GetConnectionString()
+	connectionString := GetConnectionString(socketConfig)
 	client := builder.BuildToConnect(connectionString)
 
 	err := client.Dial()
@@ -67,4 +45,18 @@ func InitClient(socketConfig SocketConfiguration, subscriptions func(client *gos
 	socketClient = client
 
 	return socketClient
+}
+
+func GetConnectionString(sc structure.SocketConfiguration) string {
+	connectionString := sc.ConnectionString
+	port, _ := strconv.Atoi(sc.Port)
+	if connectionString == "" {
+		connectionString = gosocketio.GetUrl(
+			sc.Host,
+			port,
+			sc.Secure,
+			sc.UrlParams,
+		)
+	}
+	return connectionString
 }

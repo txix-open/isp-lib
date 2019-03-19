@@ -17,39 +17,13 @@ type ErrHandler func(err error)
 
 type DisconnectionHandler func(err *amqp.Error)
 
-type RabbitConfig struct {
-	Address                  structure.AddressConfiguration `valid:"required~Required" schema:"Address"`
-	Vhost                    string                         `schema:"Vhost"`
-	User                     string                         `schema:"Username"`
-	Password                 string                         `schema:"Password"`
-	DisconnectionHandler     DisconnectionHandler           `json:"-"`
-	ReconnectionErrorHandler ErrHandler                     `json:"-"`
-	SubscriptionErrorHandler ErrHandler                     `json:"-"`
-}
-
-func (rc RabbitConfig) GetUri() string {
-	if rc.User == "" {
-		return fmt.Sprintf("amqp://%s/%s", rc.Address.GetAddress(), rc.Vhost)
-	} else {
-		return fmt.Sprintf("amqp://%s:%s@%s/%s", rc.User, rc.Password, rc.Address.GetAddress(), rc.Vhost)
-	}
-}
-
-func (rc RabbitConfig) reconnectionTimeout() time.Duration {
-	/*timeout := rc.ReconnectionTimeoutMs
-	if timeout <= 0 {
-		timeout = defaultReconnectionTimeout
-	}*/
-	return 3 * time.Millisecond
-}
-
 type Client struct {
 	conn      *amqp.Connection
 	publisher *amqp.Channel
 	errChan   chan *amqp.Error
 	subs      []*Subscription
 	lock      sync.RWMutex
-	cfg       RabbitConfig
+	cfg       structure.RabbitConfig
 }
 
 func (c *Client) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
@@ -157,10 +131,10 @@ func (c *Client) makeSub(req SubRequest) (*Subscription, error) {
 
 func (c *Client) startConnCheckTask() {
 	go func() {
-		for err := range c.errChan {
-			if c.cfg.DisconnectionHandler != nil {
+		for range c.errChan {
+			/*if c.cfg.DisconnectionHandler != nil {
 				c.cfg.DisconnectionHandler(err)
-			}
+			}*/
 
 			c.lock.Lock()
 
@@ -179,20 +153,16 @@ func (c *Client) startConnCheckTask() {
 			for !connected {
 				err := c.dial()
 				if err != nil {
-					if c.cfg.ReconnectionErrorHandler != nil {
+					/*if c.cfg.ReconnectionErrorHandler != nil {
 						c.cfg.ReconnectionErrorHandler(err)
-					}
-					time.Sleep(time.Duration(c.cfg.reconnectionTimeout()))
+					}*/
+					time.Sleep(time.Duration(c.cfg.ReconnectionTimeout()))
 				} else {
 					connected = true
 					for _, sub := range c.subs {
 						newSub, err := makeSub(sub.req, c)
-						eh := c.cfg.SubscriptionErrorHandler
-						if err != nil {
-							if eh != nil {
-								eh(err)
-							}
-						} else {
+						//eh := c.cfg.SubscriptionErrorHandler
+						if err == nil {
 							sub.lock.Lock()
 							for _, h := range sub.channels {
 								h.Close() //ensure release all resources
@@ -220,7 +190,7 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func MakeClient(config RabbitConfig) (*Client, error) {
+func MakeClient(config structure.RabbitConfig) (*Client, error) {
 	errChan := make(chan *amqp.Error)
 	c := &Client{
 		cfg:     config,

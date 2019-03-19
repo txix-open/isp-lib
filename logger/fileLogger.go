@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
+	"github.com/integration-system/isp-lib/structure"
 	"io"
 	"os"
 	"path"
@@ -13,23 +14,12 @@ import (
 
 const timestampFormat = "2006-01-02T15:04:05.999-07:00"
 
-type SyncLoggerConfig struct {
-	Enable         bool   `schema:"Enable file logging"`
-	Filename       string `json:"filename" yaml:"filename" schema:"File name"`
-	MaxSize        int    `json:"-" yaml:"maxsize"`
-	MaxAge         int    `json:"-" yaml:"maxage"`
-	MaxBackups     int    `json:"-" yaml:"maxbackups"`
-	LocalTime      bool   `json:"-" yaml:"localtime"`
-	Compress       bool   `json:"compress" yaml:"compress"`
-	ImmediateFlush bool   `json:"immediateFlush" yaml:"immediateFlush"`
-}
-
 type SyncLogger interface {
 	Log(event, source string, data string) error
 	io.Closer
 }
 
-func NewFileLogger(config SyncLoggerConfig) (SyncLogger, error) {
+func NewFileLogger(config structure.SyncLoggerConfig) (SyncLogger, error) {
 	if !config.Enable {
 		return nil, nil
 	} else {

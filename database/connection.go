@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"github.com/go-pg/pg"
 	"github.com/integration-system/isp-lib/logger"
+	"github.com/integration-system/isp-lib/structure"
 	"time"
 )
 
-func NewDbConnection(config DBConfiguration) (*pg.DB, error) {
+func NewDbConnection(config structure.DBConfiguration) (*pg.DB, error) {
 	pdb := pg.Connect(&pg.Options{
 		User:               config.Username,
 		Password:           config.Password,
@@ -28,7 +29,7 @@ func NewDbConnection(config DBConfiguration) (*pg.DB, error) {
 	return pdb, err
 }
 
-func openSqlConn(config DBConfiguration, schema string) (*sql.DB, error) {
+func openSqlConn(config structure.DBConfiguration, schema string) (*sql.DB, error) {
 	return sql.Open("postgres", "postgres://"+
 		config.Address+":"+config.Port+
 		"/"+config.Database+

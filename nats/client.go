@@ -10,15 +10,6 @@ import (
 	"time"
 )
 
-type NatsConfig struct {
-	ClusterId             string                         `valid:"required~Required" schema:"Cluster ID"`
-	Address               structure.AddressConfiguration `valid:"required~Required" schema:"Address"`
-	PingAttempts          int                            `schema:"Max ping attempts,When max attempts is reached connection is closed"`
-	PintIntervalSec       int                            `schema:"Ping interval,In seconds"`
-	ClientId              string                         `json:"-"`
-	ConnectionLostHandler nats.ConnHandler               `json:"-"`
-}
-
 type NatsClient struct {
 	stan.Conn
 	Addr string
@@ -74,7 +65,7 @@ func (nc *NatsClient) Close() error {
 	return nil
 }
 
-func (nc *NatsClient) makeReconnectionCallback(natsConfig *NatsConfig) nats.ConnHandler {
+func (nc *NatsClient) makeReconnectionCallback(natsConfig *structure.NatsConfig) nats.ConnHandler {
 	return func(conn *nats.Conn) {
 		if stanConn, err := newStanConn(natsConfig, conn); err != nil {
 			logger.Errorf("Could not reconnect to nats streaming server %s. error: %v", nc.Addr, err)
@@ -98,11 +89,11 @@ func (nc *NatsClient) makeReconnectionCallback(natsConfig *NatsConfig) nats.Conn
 	}
 }
 
-func InitDefaultClient(natsConfig *NatsConfig) (nc *NatsClient) {
+func InitDefaultClient(natsConfig *structure.NatsConfig) (nc *NatsClient) {
 	lock.Lock()
 	defer lock.Unlock()
 
-	c, err := NewNatsStreamingServerClient(natsConfig)
+	c, err := NewNatsStreamingServerClient(natsConfig, nil)
 	if err != nil {
 		logger.Fatalf("Could not connect to nats streaming server %s. Error: %v", natsConfig.Address, err)
 		return
@@ -115,7 +106,7 @@ func InitDefaultClient(natsConfig *NatsConfig) (nc *NatsClient) {
 	return client
 }
 
-func NewNatsStreamingServerClient(natsConfig *NatsConfig) (*NatsClient, error) {
+func NewNatsStreamingServerClient(natsConfig *structure.NatsConfig, disconnectionHandler nats.ConnHandler) (*NatsClient, error) {
 	addr := natsConfig.Address.GetAddress()
 	client := &NatsClient{Addr: addr}
 	natsConn, err := nats.Connect(
@@ -123,7 +114,7 @@ func NewNatsStreamingServerClient(natsConfig *NatsConfig) (*NatsClient, error) {
 		nats.Name(natsConfig.ClientId),
 		nats.MaxReconnects(-1),
 		nats.ReconnectBufSize(-1),
-		nats.DisconnectHandler(natsConfig.ConnectionLostHandler),
+		nats.DisconnectHandler(disconnectionHandler),
 		nats.ReconnectHandler(client.makeReconnectionCallback(natsConfig)),
 	)
 	if err != nil {
@@ -166,7 +157,7 @@ func GetDefaultClient() *NatsClient {
 	return client
 }
 
-func newStanConn(natsConfig *NatsConfig, natsConn *nats.Conn) (stan.Conn, error) {
+func newStanConn(natsConfig *structure.NatsConfig, natsConn *nats.Conn) (stan.Conn, error) {
 	addr := natsConfig.Address.GetAddress()
 	pingInterval := natsConfig.PintIntervalSec
 	if pingInterval <= 0 {

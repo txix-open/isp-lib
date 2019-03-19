@@ -5,20 +5,11 @@ import (
 	"encoding/json"
 )
 
-type AddressConfiguration struct {
-	Port string `json:"port"`
-	IP   string `json:"ip"`
-}
-
 type ModuleInfo struct {
 	ModuleName  string   `json:"moduleName"`
 	Version     string   `json:"version"`
 	LibVersion  string   `json:"libVersion"`
 	AwaitEvents []string `json:"awaitEvents"`
-}
-
-func (addressConfiguration *AddressConfiguration) GetAddress() string {
-	return addressConfiguration.IP + ":" + addressConfiguration.Port
 }
 
 type RoutingConfig []BackendDeclaration

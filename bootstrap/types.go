@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/integration-system/isp-lib/socket"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
 	"os"
@@ -27,7 +26,7 @@ func (r ModuleRequirements) IsEmpty() bool {
 }
 
 // invoked once, returns config service address
-type socketConfigProducer func(localConfigPtr interface{}) socket.SocketConfiguration
+type socketConfigProducer func(localConfigPtr interface{}) structure.SocketConfiguration
 
 // invoked once before module shutdown
 type shutdownHandler func(ctx context.Context, sig os.Signal)
