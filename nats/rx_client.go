@@ -8,6 +8,10 @@ import (
 	"sync"
 )
 
+var (
+	ErrNotConnected = errors.New("nats: not connected")
+)
+
 type Option func(c *RxNatsClient)
 
 type RxNatsClient struct {
@@ -20,10 +24,9 @@ type RxNatsClient struct {
 	errorHandler         errorHandler
 
 	lastConfiguration structure.NatsConfig
-	clientId          string
 }
 
-func (c *RxNatsClient) ReceiveConfiguration(cfg structure.NatsConfig) {
+func (c *RxNatsClient) ReceiveConfiguration(clientId string, cfg structure.NatsConfig) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -31,7 +34,7 @@ func (c *RxNatsClient) ReceiveConfiguration(cfg structure.NatsConfig) {
 		return
 	}
 
-	cfg.ClientId = c.clientId
+	cfg.ClientId = clientId
 	if !cmp.Equal(c.lastConfiguration, cfg) {
 		nc, err := NewNatsStreamingServerClient(
 			cfg,
@@ -57,6 +60,17 @@ func (c *RxNatsClient) ReceiveConfiguration(cfg structure.NatsConfig) {
 	}
 }
 
+func (c *RxNatsClient) Visit(visitor func(c *NatsClient) error) error {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.nc == nil {
+		return ErrNotConnected
+	}
+
+	return visitor(c.nc)
+}
+
 func (c *RxNatsClient) Close() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -71,8 +85,8 @@ func (c *RxNatsClient) Close() error {
 	return nil
 }
 
-func NewRxNatsClient(clientId string, opts ...Option) *RxNatsClient {
-	c := &RxNatsClient{active: true, clientId: clientId}
+func NewRxNatsClient(opts ...Option) *RxNatsClient {
+	c := &RxNatsClient{active: true}
 
 	for _, opt := range opts {
 		opt(c)
