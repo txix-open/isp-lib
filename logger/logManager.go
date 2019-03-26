@@ -16,7 +16,6 @@ const (
 
 var (
 	terminalLogger *logrus.Logger
-	fileLogger     *logrus.Logger
 )
 
 type log2LogrusWriter struct {
@@ -70,9 +69,6 @@ func init() {
 func SetLevel(level string) {
 	if level, err := logrus.ParseLevel(level); err == nil {
 		terminalLogger.SetLevel(level)
-		if fileLogger != nil {
-			fileLogger.SetLevel(level)
-		}
 	} else {
 		Fatal(err)
 	}
@@ -80,85 +76,51 @@ func SetLevel(level string) {
 
 func Info(args ...interface{}) {
 	terminalLogger.Infoln(args...)
-	if fileLogger != nil {
-		fileLogger.Infoln(args...)
-	}
+
 }
 
 func Infof(format string, args ...interface{}) {
 	terminalLogger.Infof(format, args...)
-	if fileLogger != nil {
-		fileLogger.Infof(format, args...)
-	}
+
 }
 
 func Warn(args ...interface{}) {
 	terminalLogger.Warnln(args...)
-	if fileLogger != nil {
-		fileLogger.Warnln(args...)
-	}
 }
 
 func Warnf(format string, args ...interface{}) {
 	terminalLogger.Warnf(format, args...)
-	if fileLogger != nil {
-		fileLogger.Warnf(format, args...)
-	}
 }
 
 func Debug(args ...interface{}) {
 	terminalLogger.Debugln(args...)
-	if fileLogger != nil {
-		fileLogger.Debugln(args...)
-	}
 }
 
 func Debugf(format string, args ...interface{}) {
 	terminalLogger.Debugf(format, args...)
-	if fileLogger != nil {
-		fileLogger.Debugf(format, args...)
-	}
 }
 
 func Error(args ...interface{}) {
 	terminalLogger.Errorln(args...)
-	if fileLogger != nil {
-		fileLogger.Errorln(args...)
-	}
 }
 
 func Errorf(format string, args ...interface{}) {
 	terminalLogger.Errorf(format, args...)
-	if fileLogger != nil {
-		fileLogger.Errorf(format, args...)
-	}
 }
 
 func Fatal(args ...interface{}) {
-	if fileLogger != nil {
-		fileLogger.Errorln(args...)
-	}
 	terminalLogger.Fatalln(args...)
 }
 
 func Fatalf(format string, args ...interface{}) {
-	if fileLogger != nil {
-		fileLogger.Errorf(format, args...)
-	}
 	terminalLogger.Fatalf(format, args...)
 }
 
 func Panic(args ...interface{}) {
-	if fileLogger != nil {
-		fileLogger.Errorln(args...)
-	}
 	terminalLogger.Panicln(args)
 }
 
 func Panicf(format string, args ...interface{}) {
-	if fileLogger != nil {
-		fileLogger.Errorf(format, args...)
-	}
 	terminalLogger.Panicf(format, args)
 }
 
