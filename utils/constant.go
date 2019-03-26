@@ -12,8 +12,6 @@ var (
 	EnvMigrationPath = os.Getenv("APP_MIGRATION_PATH")
 	DEV              = strings.ToLower(os.Getenv("APP_MODE")) == "dev"
 	LOG_LEVEL        = os.Getenv("LOG_LEVEL")
-
-	FileLoggerConfig = os.Getenv("LOG_CONFIG")
 )
 
 const (

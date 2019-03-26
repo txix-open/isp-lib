@@ -1,17 +1,12 @@
 package logger
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/integration-system/isp-lib/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/x-cray/logrus-prefixed-formatter"
-	"github.com/integration-system/isp-lib/utils"
-	"gopkg.in/natefinch/lumberjack.v2"
-	"io/ioutil"
-	"log"
 	"os"
 	"strings"
-	"time"
 )
 
 const (
@@ -28,16 +23,15 @@ type log2LogrusWriter struct {
 }
 
 func (w *log2LogrusWriter) Write(b []byte) (int, error) {
-	s := strings.Replace(string(b), " [31mstack[0m=", "\n[31mstack[0m", -1)
-	return os.Stdout.WriteString(s)
+	return os.Stdout.Write(b)
 }
 
 func init() {
 	terminalLogger = logrus.New()
 	terminalFormatter := &prefixed.TextFormatter{
-		ForceFormatting: true,
-		DisableColors:   true,
-		//ForceColors:      true,
+		ForceFormatting:  true,
+		DisableColors:    !utils.DEV,
+		ForceColors:      utils.DEV,
 		FullTimestamp:    true,
 		DisableTimestamp: false,
 		TimestampFormat:  defaultTsFormat,
@@ -61,40 +55,6 @@ func init() {
 	terminalLogger.Formatter = terminalFormatter
 	terminalLogger.SetOutput(&log2LogrusWriter{})
 	terminalLogger.AddHook(defaultHook())
-
-	if utils.FileLoggerConfig != "" {
-		if bytes, err := ioutil.ReadFile(utils.FileLoggerConfig); err == nil {
-			lj := &lumberjack.Logger{}
-			if json.Unmarshal(bytes, lj); err == nil {
-				fileLogger = logrus.New()
-				fileFormatter := &prefixed.TextFormatter{
-					ForceFormatting:  true,
-					FullTimestamp:    true,
-					DisableTimestamp: false,
-					TimestampFormat:  defaultTsFormat,
-					QuoteCharacter:   "",
-				}
-				fileLogger.Formatter = fileFormatter
-				fileLogger.SetOutput(lj)
-				fileLogger.AddHook(defaultHook())
-				if err := lj.Rotate(); err != nil {
-					Warn(err)
-				}
-				go func() {
-					for {
-						<-time.After(24 * time.Hour)
-						if err := lj.Rotate(); err != nil {
-							Warn(err)
-						}
-					}
-				}()
-			} else {
-				log.Println("Could not read file logger config", err)
-			}
-		} else {
-			log.Println("Could not read file logger config", err)
-		}
-	}
 
 	if utils.DEV {
 		SetLevel(logrus.DebugLevel.String())
