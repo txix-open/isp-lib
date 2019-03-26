@@ -1,29 +1,14 @@
 package nats
 
 import (
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
+	"github.com/pkg/errors"
 	"math"
 	"sync"
 	"time"
 )
-
-type NatsClient struct {
-	stan.Conn
-	Addr string
-
-	natsConn    *nats.Conn
-	mu          sync.Mutex
-	durableSubs []*DurableSub
-}
-
-type DurableSub struct {
-	stan.Subscription
-	handler stan.MsgHandler
-	subj    string
-}
 
 const (
 	Infinity               = math.MaxInt32
@@ -31,91 +16,133 @@ const (
 	defaultPingIntervalSec = 3
 )
 
-var (
-	client *NatsClient
-	lock   = sync.Mutex{}
-)
+type connectionHandler func(c *NatsClient, cfg structure.NatsConfig)
 
-func (nc *NatsClient) MakeDurableQueueSubscription(subject string, handler stan.MsgHandler) (stan.Subscription, error) {
-	if sub, err := nc.QueueSubscribe(subject,
+type disconnectionHandler func(cfg structure.NatsConfig)
+
+type errorHandler func(err error)
+
+type NatsClient struct {
+	stan.Conn
+	cfg                  structure.NatsConfig
+	connectionHandler    connectionHandler
+	disconnectionHandler disconnectionHandler
+	errorHandler         errorHandler
+
+	natsConn *nats.Conn
+	lock     sync.Mutex
+	subs     []*DurableSub
+}
+
+func (c *NatsClient) MakeDurableQueueSubscription(subject string, handler stan.MsgHandler) (stan.Subscription, error) {
+	if sub, err := c.QueueSubscribe(subject,
 		subject,
 		handler,
 		stan.DurableName(subject),
-		stan.DeliverAllAvailable(),
 	); err != nil {
 		return nil, err
 	} else {
-		ds := &DurableSub{sub, handler, subject}
-		nc.mu.Lock()
-		nc.durableSubs = append(nc.durableSubs, ds)
-		nc.mu.Unlock()
+		ds := &DurableSub{owner: c, Subscription: sub, handler: handler, subj: subject}
+		c.lock.Lock()
+		c.subs = append(c.subs, ds)
+		c.lock.Unlock()
 		return ds, nil
 	}
 }
 
-func (nc *NatsClient) Close() error {
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
+func (c *NatsClient) Close() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
-	defer nc.natsConn.Close()
+	defer c.natsConn.Close()
 
-	if err := nc.Conn.Close(); err != nil {
+	if err := c.Conn.Close(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (nc *NatsClient) makeReconnectionCallback(natsConfig *structure.NatsConfig) nats.ConnHandler {
-	return func(conn *nats.Conn) {
-		if stanConn, err := newStanConn(natsConfig, conn); err != nil {
-			logger.Errorf("Could not reconnect to nats streaming server %s. error: %v", nc.Addr, err)
+func (c *NatsClient) removeSubWithLock(subId string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if len(c.subs) == 0 {
+		return
+	}
+
+	newSubs := make([]*DurableSub, 0, len(c.subs)-1)
+	for _, sub := range c.subs {
+		if sub.subj != subId {
+			newSubs = append(newSubs, sub)
+		}
+	}
+	c.subs = newSubs
+}
+
+func (c *NatsClient) resubscribe(subs []*DurableSub) {
+	newSubs := make([]*DurableSub, 0, len(subs))
+	for _, ds := range subs {
+		_ = ds.Subscription.Close()
+		if sub, err := c.Conn.QueueSubscribe(ds.subj, ds.subj, ds.handler, stan.DurableName(ds.subj)); err != nil {
+			if c.errorHandler != nil {
+				c.errorHandler(errors.WithMessagef(err, "resubscribe to '%s'", ds.subj))
+			}
 		} else {
-			logger.Infof("Reconnected to nats streaming server %s", nc.Addr)
-			nc.mu.Lock()
-			if nc.Conn != nil {
-				nc.Conn.Close()
+			ds.owner = c
+			ds.Subscription = sub
+			newSubs = append(newSubs, ds)
+		}
+	}
+	c.subs = newSubs
+}
+
+func (c *NatsClient) makeReconnectionCallback() nats.ConnHandler {
+	return func(conn *nats.Conn) {
+		if stanConn, err := newStanConn(c.cfg, conn); err != nil {
+			if c.errorHandler != nil {
+				c.errorHandler(errors.WithMessage(err, "reconnect"))
 			}
-			nc.Conn = stanConn
-			for _, ds := range nc.durableSubs {
-				ds.Close()
-				if sub, err := stanConn.QueueSubscribe(ds.subj, ds.subj, ds.handler, stan.DurableName(ds.subj)); err != nil {
-					logger.Error("Could not reestablish subscription", err)
-				} else {
-					ds.Subscription = sub
-				}
+		} else {
+			if c.connectionHandler != nil {
+				c.connectionHandler(c, c.cfg)
 			}
-			nc.mu.Unlock()
+
+			c.lock.Lock()
+
+			if c.Conn != nil {
+				_ = c.Conn.Close()
+			}
+			c.Conn = stanConn
+			c.resubscribe(c.subs)
+
+			c.lock.Unlock()
 		}
 	}
 }
 
-func InitDefaultClient(natsConfig *structure.NatsConfig) (nc *NatsClient) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	c, err := NewNatsStreamingServerClient(natsConfig, nil)
-	if err != nil {
-		logger.Fatalf("Could not connect to nats streaming server %s. Error: %v", natsConfig.Address, err)
-		return
+func NewNatsStreamingServerClient(
+	natsConfig structure.NatsConfig,
+	disconnectionHandler disconnectionHandler,
+	connectionHandler connectionHandler,
+	errorHandler errorHandler,
+) (*NatsClient, error) {
+	client := &NatsClient{
+		cfg:                  natsConfig,
+		disconnectionHandler: disconnectionHandler,
+		connectionHandler:    connectionHandler,
+		errorHandler:         errorHandler,
 	}
-
-	logger.Infof("Successfully connected to nats streaming server %s", c.Addr)
-
-	client = c
-
-	return client
-}
-
-func NewNatsStreamingServerClient(natsConfig *structure.NatsConfig, disconnectionHandler nats.ConnHandler) (*NatsClient, error) {
-	addr := natsConfig.Address.GetAddress()
-	client := &NatsClient{Addr: addr}
 	natsConn, err := nats.Connect(
-		addr,
+		natsConfig.Address.GetAddress(),
 		nats.Name(natsConfig.ClientId),
 		nats.MaxReconnects(-1),
 		nats.ReconnectBufSize(-1),
-		nats.DisconnectHandler(disconnectionHandler),
-		nats.ReconnectHandler(client.makeReconnectionCallback(natsConfig)),
+		nats.DisconnectHandler(func(conn *nats.Conn) {
+			if disconnectionHandler != nil {
+				disconnectionHandler(natsConfig)
+			}
+		}),
+		nats.ReconnectHandler(client.makeReconnectionCallback()),
 	)
 	if err != nil {
 		return nil, err
@@ -133,31 +160,7 @@ func NewNatsStreamingServerClient(natsConfig *structure.NatsConfig, disconnectio
 	return client, nil
 }
 
-func CloseDefaultClient() {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if client != nil {
-		if err := client.Close(); err != nil {
-			logger.Warn(err)
-		}
-		client = nil
-	}
-}
-
-func IsInitialized() bool {
-	return client != nil
-}
-
-func GetDefaultClient() *NatsClient {
-	if !IsInitialized() {
-		logger.Fatal("Nats client has not initialized")
-	}
-
-	return client
-}
-
-func newStanConn(natsConfig *structure.NatsConfig, natsConn *nats.Conn) (stan.Conn, error) {
+func newStanConn(natsConfig structure.NatsConfig, natsConn *nats.Conn) (stan.Conn, error) {
 	addr := natsConfig.Address.GetAddress()
 	pingInterval := natsConfig.PintIntervalSec
 	if pingInterval <= 0 {
