@@ -43,6 +43,7 @@ const (
 	mdmConverterFilterSearchRequest = "mdm-converter/search_request/filter"
 
 	mdmSearchSearchRecords      = "mdm-search/record/search"
+	mdmSearchCountRecords       = "mdm-search/record/count"
 	mdmSearchSearchIdList       = "mdm-search/record/search_id_list"
 	mdmSearchSearchIdWithScroll = "mdm-search/record/search_id_with_scroll"
 
@@ -147,6 +148,11 @@ var (
 			ConvertAnyBatchList:     mdmConverterConvertAnyBatchList,
 			ConvertErlBatchList:     mdmConverterConvertErlBatchList,
 			FilterBatchList:         mdmConverterFilterDataBatchList,
+		},
+		MdmSearchService: struct {
+			Count string
+		}{
+			Count: mdmSearchCountRecords,
 		},
 	}
 	MdmAsyncApiLinks = MdmAsyncApiService{

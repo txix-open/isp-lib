@@ -87,6 +87,9 @@ type MdmDumperService struct {
 		ConvertErlBatchList     string
 		FilterBatchList         string
 	}
+	MdmSearchService struct {
+		Count string
+	}
 }
 
 type MdmAsyncApiService struct {
