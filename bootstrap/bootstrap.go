@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	LibraryVersion = "1.1.0"
+	LibraryVersion = "1.1.1"
 )
 
 type bootstrapConfiguration struct {
