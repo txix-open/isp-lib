@@ -82,6 +82,13 @@ func (bc *InternalGrpcClient) WithMetric(catchMetric func(method string, dur tim
 	return bc
 }
 
+func (bc *InternalGrpcClient) Conn() (isp.BackendServiceClient, error) {
+	if bc.length == 0 {
+		return nil, ErrNoAliveConnections
+	}
+	return bc.nextConn(), nil
+}
+
 func (bc *InternalGrpcClient) nextConn() isp.BackendServiceClient {
 	if bc.length == 1 {
 		return bc.clients[0]
