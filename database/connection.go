@@ -23,7 +23,7 @@ func NewDbConnection(config structure.DBConfiguration) (*pg.DB, error) {
 	var n time.Time
 	_, err := pdb.QueryOne(pg.Scan(&n), "SELECT now()")
 	if err == nil {
-		logger.Infof("Database server time: %d", n)
+		logger.Infof("Database server time: %s", n)
 	}
 
 	return pdb, err
