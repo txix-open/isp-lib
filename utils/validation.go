@@ -69,7 +69,7 @@ func ValidateV2(value interface{}) error {
 	if kind == reflect.Array || kind == reflect.Slice {
 		for i := 0; i < val.Len(); i++ {
 			item := val.Index(i)
-			err := Validate(item.Interface())
+			err := ValidateV2(item.Interface())
 			if err != nil {
 				return err
 			}
