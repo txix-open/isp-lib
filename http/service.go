@@ -287,7 +287,10 @@ func handleSoapRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
 		return nil, &soap.SOAPFault{Code: "400", String: "Invalid xml request body"}
 	}
 	ctx.mappedRequestBody = reflect.ValueOf(reqBody.Body.Content).Elem().Interface()
-	//todo add validation
+	if err := validate(ctx.mappedRequestBody); err != nil {
+		return nil, err
+	}
+
 	return callF(fd, params)
 }
 
@@ -300,8 +303,10 @@ func handleRestRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
 			logger.Warn(err)
 			return nil, &RESTFault{Code: http.StatusBadRequest, Status: "Invalid json request body"}
 		}
-		//todo add validation
 		ctx.mappedRequestBody = val.Elem().Interface()
+		if err := validate(ctx.mappedRequestBody); err != nil {
+			return nil, err
+		}
 		params[fd.bodyNum] = val
 	}
 

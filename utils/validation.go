@@ -51,17 +51,17 @@ func CreateValidationErrorDetailsV2(errorCode codes.Code, errorMessage string, d
 	}
 
 	errors := make(map[string]string, l/2)
-	for i := 0; i < l-1; i ++ {
+	for i := 0; i < l-1; i++ {
 		errors[detailsPairs[i]] = detailsPairs[i+1]
 	}
 	return CreateValidationErrorDetails(errorCode, errorMessage, errors)
 }
 
-func Validate(value interface{}) error {
+func ValidateV2(value interface{}) error {
 	rt := reflect.TypeOf(value)
 	val := reflect.ValueOf(value)
 	kind := rt.Kind()
-	if rt.Kind() == reflect.Ptr {
+	if kind == reflect.Ptr || kind == reflect.Interface {
 		rt = rt.Elem()
 		kind = rt.Kind()
 		val = val.Elem()
@@ -76,12 +76,16 @@ func Validate(value interface{}) error {
 		}
 	} else {
 		_, err := govalidator.ValidateStruct(value)
-		if err != nil {
-			errors := govalidator.ErrorsByField(err)
-			if len(errors) != 0 {
-				return CreateValidationErrorDetails(codes.InvalidArgument, ValidationError, errors)
-			}
-		}
+		return err
+	}
+	return nil
+}
+
+func Validate(value interface{}) error {
+	err := ValidateV2(value)
+	errors := govalidator.ErrorsByField(err)
+	if len(errors) != 0 {
+		return CreateValidationErrorDetails(codes.InvalidArgument, ValidationError, errors)
 	}
 	return nil
 }
