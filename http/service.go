@@ -18,7 +18,7 @@ import (
 
 const (
 	soapActionHeader = "SOAPAction"
-	xmlContentType   = `application/xml; charset="utf-8"`
+	xmlContentType   = `application/soap+xml; charset="utf-8"`
 	jsonContentType  = `application/json; charset="utf-8"`
 )
 
