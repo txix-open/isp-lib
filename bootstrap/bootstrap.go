@@ -16,6 +16,8 @@ type bootstrapConfiguration struct {
 	remoteConfigPtr  interface{}
 	remoteConfigType string
 
+	defaultRemoteConfigPath string
+
 	onLocalConfigLoad     *reflect.Value
 	onRemoteConfigReceive *reflect.Value
 	onSocketErrorReceive  *reflect.Value
@@ -131,6 +133,12 @@ func (cfg *bootstrapConfiguration) RequireRoutes(f routesConsumer) *bootstrapCon
 // module is in not ready state until establish grpc connection with required modules
 func (cfg *bootstrapConfiguration) RequireModule(moduleName string, consumer addressListConsumer, mustConnect bool) *bootstrapConfiguration {
 	cfg.requiredModules[utils.ModuleConnected(moduleName)] = &connectConsumer{mustConnect: mustConnect, consumer: consumer}
+	return cfg
+}
+
+// add path to remote config module
+func (cfg *bootstrapConfiguration) DefaultRemoteConfigPath(path string) *bootstrapConfiguration {
+	cfg.defaultRemoteConfigPath = path
 	return cfg
 }
 

@@ -17,8 +17,9 @@ const (
 type Schema *jsonschema.Schema
 
 type ConfigSchema struct {
-	Version string `json:"version"`
-	Schema  Schema `json:"schema"`
+	Version       string                 `json:"version"`
+	Schema        Schema                 `json:"schema"`
+	DefaultConfig map[string]interface{} `json:"config"`
 }
 
 func GenerateConfigSchema(cfgPtr interface{}) Schema {
