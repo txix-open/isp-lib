@@ -159,13 +159,30 @@ func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structu
 			for i := 0; i < t.NumField(); i++ {
 				f := t.Field(i)
 				if f.Type.Kind() == reflect.Func {
-					endpoints = append(endpoints, getEndpointConfig(methodPrefix, f))
+					endpoints = append(endpoints, GetEndpointConfig(methodPrefix, f))
 				}
 			}
 		}
 	}
 
 	return endpoints
+}
+
+func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.EndpointConfig {
+	name, ok := f.Tag.Lookup("method")
+	if !ok {
+		name = f.Name
+	}
+	group, ok := f.Tag.Lookup("group")
+	if !ok {
+		group = utils.MethodDefaultGroup
+	}
+	inner := false
+	innerString, ok := f.Tag.Lookup("inner")
+	if ok && strings.ToLower(innerString) == "true" {
+		inner = true
+	}
+	return structure.EndpointConfig{Path: path.Join("%s/%s/%s", methodPrefix, group, name), Inner: inner}
 }
 
 func readBody(msg *isp.Message, ptr interface{}) error {
@@ -212,23 +229,6 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	return fun, nil
 }
 
-func getEndpointConfig(methodPrefix string, f reflect.StructField) structure.EndpointConfig {
-	name, ok := f.Tag.Lookup("method")
-	if !ok {
-		name = f.Name
-	}
-	group, ok := f.Tag.Lookup("group")
-	if !ok {
-		group = utils.MethodDefaultGroup
-	}
-	inner := false
-	innerString, ok := f.Tag.Lookup("inner")
-	if ok && strings.ToLower(innerString) == "true" {
-		inner = true
-	}
-	return structure.EndpointConfig{Path: path.Join("%s/%s/%s", methodPrefix, group, name), Inner: inner}
-}
-
 func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streaming.StreamConsumer) {
 	functions := make(map[string]function)
 	streamHandlers := make(map[string]streaming.StreamConsumer)
@@ -251,7 +251,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 				field := val.Field(i)
 				fType := field.Type()
 				if fType.Kind() == reflect.Func {
-					config := getEndpointConfig(methodPrefix, t.Field(i))
+					config := GetEndpointConfig(methodPrefix, t.Field(i))
 					key := config.Path
 					if f, ok := field.Interface().(streaming.StreamConsumer); ok {
 						streamHandlers[key] = f
