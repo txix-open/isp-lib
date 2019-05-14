@@ -6,15 +6,20 @@ import (
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/streaming"
+	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"path"
 	"reflect"
+	"strings"
 )
 
 type ErrorHandler func(err error) (interface{}, error)
+
+type Interceptor func(method string, inputData interface{}, md metadata.MD, proceed func() (interface{}, error)) (interface{}, error)
 
 var (
 	metaDataType = reflect.TypeOf(metadata.MD{})
@@ -25,18 +30,11 @@ var (
 	}
 )
 
-type function struct {
-	dataParamType reflect.Type
-	mdParamType   reflect.Type
-	mdParamNum    int
-	dataParamNum  int
-	fun           reflect.Value
-}
-
 type DefaultService struct {
 	functions       map[string]function
 	streamConsumers map[string]streaming.StreamConsumer
-	eh              ErrorHandler
+	errHandler      ErrorHandler
+	interceptor     Interceptor
 }
 
 func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.Message, error) {
@@ -52,68 +50,27 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 		return nil, err
 	}
 
-	var instance interface{}
-	if handler.dataParamType != nil {
-		val := reflect.New(handler.dataParamType)
-		instance = val.Interface()
-		err := readBody(msg, instance)
-		if err != nil {
-			logger.Error(err)
-			return nil, status.Error(codes.InvalidArgument, "Invalid request body")
-		}
-		err = utils.Validate(instance)
-		if err != nil {
-			logger.Debug(err)
-			if df.eh != nil {
-				result, err := df.eh(err)
-				msg = emptyBody
-				if result != nil {
-					msg, err = toBytes(result, ctx)
-				}
-				return msg, err
-			}
-			return nil, err
-		}
-	}
-
-	var argCount int
-	if handler.mdParamNum > handler.dataParamNum {
-		argCount = handler.mdParamNum + 1
-	} else {
-		argCount = handler.dataParamNum + 1
-	}
-	args := make([]reflect.Value, argCount)
-	if handler.mdParamNum != -1 {
-		args[handler.mdParamNum] = reflect.ValueOf(md).Convert(handler.mdParamType)
-	}
-	if handler.dataParamNum != -1 && instance != nil {
-		args[handler.dataParamNum] = reflect.ValueOf(instance).Elem()
-	}
-
-	res := handler.fun.Call(args)
-
-	l := len(res)
+	var dataParam interface{}
 	var result interface{}
-	for i := 0; i < l; i++ {
-		v := res[i]
-		if e, ok := v.Interface().(error); ok && err == nil {
-			err = e
-			continue
-		}
-		if result == nil { // && !v.IsNil()
-			result = v.Interface()
-			continue
+	dataParam, err = handler.unmarshalAndValidateInputData(msg)
+	if err == nil {
+		if df.interceptor != nil {
+			result, err = df.interceptor(handler.methodName, dataParam, md, func() (interface{}, error) {
+				return handler.call(dataParam, md)
+			})
+		} else {
+			result, err = handler.call(dataParam, md)
 		}
 	}
 
-	if err != nil && df.eh != nil {
-		result, err = df.eh(err)
+	if err != nil && df.errHandler != nil {
+		result, err = df.errHandler(err)
 	}
 
 	if err != nil {
 		grpcError, mustLog := ResolveError(err)
 		if mustLog {
-			logger.Errorf("Method:%s Error:%v", handler.fun.String(), err)
+			logger.Errorf("Method:%s Error:%v", handler.methodName, err)
 		}
 		return nil, grpcError.Err()
 	}
@@ -143,7 +100,12 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 }
 
 func (df *DefaultService) WithErrorHandler(eh ErrorHandler) *DefaultService {
-	df.eh = eh
+	df.errHandler = eh
+	return df
+}
+
+func (df *DefaultService) WithInterceptor(interceptor Interceptor) *DefaultService {
+	df.interceptor = interceptor
 	return df
 }
 
@@ -177,50 +139,33 @@ func (df *DefaultService) getStreamHandler(ctx context.Context) (streaming.Strea
 	return handler, md, nil
 }
 
-func ResolveBody(msg *isp.Message) *proto.Value {
-	list := msg.GetListBody()
-	st := msg.GetStructBody()
-	if list != nil {
-		return &proto.Value{Kind: &proto.Value_ListValue{ListValue: list}}
-	} else if st != nil {
-		return &proto.Value{Kind: &proto.Value_StructValue{StructValue: st}}
-	} else {
-		return &proto.Value{Kind: &proto.Value_NullValue{NullValue: proto.NullValue_NULL_VALUE}}
-	}
+func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
+	funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
+	return &DefaultService{functions: funcs, streamConsumers: streams}
 }
 
-func WrapBody(value *proto.Value) *isp.Message {
-	var result *isp.Message
-	switch value.GetKind().(type) {
-	case *proto.Value_StructValue:
-		result = &isp.Message{
-			Body: &isp.Message_StructBody{
-				StructBody: value.GetStructValue(),
-			},
+func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointConfig {
+	endpoints := make([]structure.EndpointConfig, 0)
+	/*logger.Infof("Outer grpc address is %s, module_name: %s, version: %s, libVersion: %s",
+	addr.GetAddress(), module.ModuleName, module.Version, module.LibVersion)*/
+	for _, handlersStruct := range handlersStructs {
+		of := reflect.ValueOf(handlersStruct)
+		if of.Kind() == reflect.Map {
+			for k := range handlersStruct.(map[string]interface{}) {
+				endpoints = append(endpoints, structure.EndpointConfig{Path: k, Inner: false})
+			}
+		} else {
+			t := of.Elem().Type()
+			for i := 0; i < t.NumField(); i++ {
+				f := t.Field(i)
+				if f.Type.Kind() == reflect.Func {
+					endpoints = append(endpoints, getEndpointConfig(methodPrefix, f))
+				}
+			}
 		}
-		break
-	case *proto.Value_ListValue:
-		result = &isp.Message{
-			Body: &isp.Message_ListBody{
-				ListBody: value.GetListValue(),
-			},
-		}
-		break
-	case *proto.Value_NullValue:
-		result = emptyBody
-	default:
-		logger.Warn("Incorrect result type, expected struct or array or nil. Will return empty response body")
-		result = emptyBody
 	}
-	return result
-}
 
-func ResolveError(err error) (s *status.Status, ok bool) {
-	s, isGrpcErr := status.FromError(err)
-	if isGrpcErr {
-		return s, false
-	}
-	return status.New(codes.Internal, utils.ServiceError), true
+	return endpoints
 }
 
 func readBody(msg *isp.Message, ptr interface{}) error {
@@ -253,32 +198,35 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	}
 	fun.dataParamNum = -1
 	fun.mdParamNum = -1
-	if inParamsCount == 2 {
-		firstParam := fType.In(0)
-		secondParam := fType.In(1)
-		if firstParam.ConvertibleTo(metaDataType) {
-			fun.mdParamNum = 0
-			fun.mdParamType = firstParam
-			fun.dataParamNum = 1
-			fun.dataParamType = secondParam
-		} else if secondParam.ConvertibleTo(metaDataType) {
-			fun.mdParamNum = 1
-			fun.mdParamType = secondParam
-			fun.dataParamNum = 0
-			fun.dataParamType = firstParam
-		}
-	} else if inParamsCount == 1 {
-		firstParam := fType.In(0)
-		if firstParam.ConvertibleTo(metaDataType) {
-			fun.mdParamNum = 0
-			fun.mdParamType = firstParam
+	for i := 0; i < inParamsCount; i++ {
+		param := fType.In(i)
+		if param.ConvertibleTo(metaDataType) {
+			fun.mdParamNum = i
+			fun.mdParamType = param
 		} else {
-			fun.dataParamNum = 0
-			fun.dataParamType = firstParam
+			fun.dataParamNum = i
+			fun.dataParamType = param
 		}
 	}
 	fun.fun = fValue
 	return fun, nil
+}
+
+func getEndpointConfig(methodPrefix string, f reflect.StructField) structure.EndpointConfig {
+	name, ok := f.Tag.Lookup("method")
+	if !ok {
+		name = f.Name
+	}
+	group, ok := f.Tag.Lookup("group")
+	if !ok {
+		group = utils.MethodDefaultGroup
+	}
+	inner := false
+	innerString, ok := f.Tag.Lookup("inner")
+	if ok && strings.ToLower(innerString) == "true" {
+		inner = true
+	}
+	return structure.EndpointConfig{Path: path.Join("%s/%s/%s", methodPrefix, group, name), Inner: inner}
 }
 
 func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streaming.StreamConsumer) {
@@ -303,21 +251,8 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 				field := val.Field(i)
 				fType := field.Type()
 				if fType.Kind() == reflect.Func {
-
-					fieldName := t.Field(i).Name
-
-					tag := t.Field(i).Tag
-					method, present := tag.Lookup("method")
-					if !present {
-						method = fieldName
-					}
-					group, ok := tag.Lookup("group")
-					if !ok {
-						group = utils.MethodDefaultGroup
-					} else {
-						group = "/" + group + "/"
-					}
-					key := methodPrefix + group + method
+					config := getEndpointConfig(methodPrefix, t.Field(i))
+					key := config.Path
 					if f, ok := field.Interface().(streaming.StreamConsumer); ok {
 						streamHandlers[key] = f
 					} else {
@@ -330,6 +265,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 						if _, present := functions[key]; present {
 							logger.Warnf("Duplicate method handlers for method: %s", key)
 						}
+						f.methodName = key
 						functions[key] = f
 					}
 				}

@@ -4,11 +4,8 @@ import (
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/structure"
-	"github.com/integration-system/isp-lib/utils"
 	"google.golang.org/grpc"
 	"net"
-	"reflect"
-	"strings"
 	"sync"
 	"time"
 )
@@ -22,50 +19,6 @@ var (
 type GrpcServer struct {
 	*grpc.Server
 	service *DefaultService
-}
-
-func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointConfig {
-	endpoints := make([]structure.EndpointConfig, 0)
-	/*logger.Infof("Outer grpc address is %s, module_name: %s, version: %s, libVersion: %s",
-	addr.GetAddress(), module.ModuleName, module.Version, module.LibVersion)*/
-	for _, handlersStruct := range handlersStructs {
-		of := reflect.ValueOf(handlersStruct)
-		if of.Kind() == reflect.Map {
-			for k := range handlersStruct.(map[string]interface{}) {
-				endpoints = append(endpoints, structure.EndpointConfig{Path: k, Inner: false})
-			}
-		} else {
-			t := of.Elem().Type()
-			for i := 0; i < t.NumField(); i++ {
-				f := t.Field(i)
-				if f.Type.Kind() == reflect.Func {
-					name, ok := f.Tag.Lookup("method")
-					if !ok {
-						name = f.Name
-					}
-					group, ok := f.Tag.Lookup("group")
-					if !ok {
-						group = utils.MethodDefaultGroup
-					} else {
-						group = "/" + group + "/"
-					}
-					inner := false
-					innerString, ok := f.Tag.Lookup("inner")
-					if ok && strings.ToLower(innerString) == "true" {
-						inner = true
-					}
-					endpoints = append(endpoints, structure.EndpointConfig{Path: methodPrefix + group + name, Inner: inner})
-				}
-			}
-		}
-	}
-
-	return endpoints
-}
-
-func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
-	funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
-	return &DefaultService{functions: funcs, streamConsumers: streams}
 }
 
 func StartBackendGrpcServer(addr structure.AddressConfiguration, service *DefaultService, opt ...grpc.ServerOption) {
@@ -83,9 +36,6 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 	for ln, err = net.Listen("tcp", grpcAddress.GetAddress()); err != nil; {
 		time.Sleep(time.Second * 3)
 		logger.Warnf("Error grpc connection: %v, try again, err: %v", grpcAddress, err)
-	}
-	if err != nil {
-		logger.Fatalf("failed to serve: %v", err)
 	}
 
 	StartBackendGrpcServerOn(addr, ln, service, opt...)

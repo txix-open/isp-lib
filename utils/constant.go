@@ -29,7 +29,7 @@ const (
 
 	// ===== GRPC =====
 	ProxyMethodNameHeader = "proxy_method_name"
-	MethodDefaultGroup    = "api/"
+	MethodDefaultGroup    = "api"
 
 	// ===== ADMIN =====
 	ADMIN_AUTH_HEADER_NAME = "x-auth-admin"
