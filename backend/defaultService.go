@@ -182,7 +182,7 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 	if ok && strings.ToLower(innerString) == "true" {
 		inner = true
 	}
-	return structure.EndpointConfig{Path: path.Join("%s/%s/%s", methodPrefix, group, name), Inner: inner}
+	return structure.EndpointConfig{Path: path.Join(methodPrefix, group, name), Inner: inner}
 }
 
 func readBody(msg *isp.Message, ptr interface{}) error {

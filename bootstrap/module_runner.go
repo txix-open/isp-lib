@@ -303,8 +303,12 @@ func (b *runner) sendModuleDeclaration(eventType string) {
 
 func (b *runner) sendModuleConfigSchema() {
 	s := schema.GenerateConfigSchema(b.remoteConfigPtr)
-	d := schema.ExtractConfig(b.defaultRemoteConfigPath)
-	req := schema.ConfigSchema{Version: b.moduleInfo.ModuleVersion, Schema: s, DefaultConfig: d}
+	req := schema.ConfigSchema{Version: b.moduleInfo.ModuleVersion, Schema: s}
+	if defaultCfg, err := schema.ExtractConfig(b.defaultRemoteConfigPath); err != nil {
+		logger.Error("could not read default config", err)
+	} else {
+		req.DefaultConfig = defaultCfg
+	}
 	if bytes, err := json.Marshal(req); err != nil {
 		logger.Error("Could not serialize config schema to JSON", err)
 	} else if res, err := b.client.Ack(utils.ModuleSendConfigSchema, string(bytes), 3*time.Second); err != nil {
