@@ -2,7 +2,9 @@ package schema
 
 import (
 	"encoding/json"
+	"github.com/integration-system/isp-lib/utils"
 	"os"
+	p "path"
 )
 
 func ExtractConfig(path string) (map[string]interface{}, error) {
@@ -21,4 +23,11 @@ func ExtractConfig(path string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func ResolveDefaultConfigPath(path string) string {
+	if utils.DEV {
+		return p.Join("conf", path)
+	}
+	return path
 }
