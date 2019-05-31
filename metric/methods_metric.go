@@ -2,7 +2,9 @@ package metric
 
 import (
 	"fmt"
+	"github.com/integration-system/isp-lib/backend"
 	"github.com/rcrowley/go-metrics"
+	"google.golang.org/grpc/metadata"
 	"sync"
 	"time"
 )
@@ -76,5 +78,18 @@ func NewMethodMetrics(metricsPrefix string, registry metrics.Registry) *MethodMe
 		registry:         registry,
 		methodHistograms: make(map[string]metrics.Histogram),
 		errorsCounter:    make(map[string]metrics.Counter),
+	}
+}
+
+func WithMetrics(metrics *MethodMetrics, interceptor backend.Interceptor) backend.Interceptor {
+	return func(method string, inputData interface{}, md metadata.MD, proceed func() (interface{}, error)) (interface{}, error) {
+		now := time.Now()
+		if interceptor != nil {
+			resp, err := interceptor(method, inputData, md, proceed)
+			since := time.Since(now)
+			metrics.CatchMetric(method, since, err)
+			return resp, err
+		}
+		return proceed()
 	}
 }
