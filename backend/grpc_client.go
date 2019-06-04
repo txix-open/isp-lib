@@ -3,6 +3,7 @@ package backend
 import (
 	"errors"
 	"github.com/integration-system/isp-lib/proto/stubs"
+	"github.com/integration-system/isp-lib/streaming"
 	"github.com/integration-system/isp-lib/utils"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -32,7 +33,7 @@ type InternalGrpcClient struct {
 	metricIntercept func(method string, dur time.Duration, err error)
 }
 
-func (bc *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
+func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
 	md := metadata.Pairs(
 		utils.ProxyMethodNameHeader, method,
 		utils.ApplicationIdHeader, strconv.Itoa(callerId),
@@ -45,25 +46,44 @@ func (bc *InternalGrpcClient) Invoke(method string, callerId int, requestBody, r
 	defer cancel()
 
 	start := time.Now()
-	c := bc.nextConn()
-	msg, err := toBytes(requestBody, ctx)
+	c := client.nextConn()
+	msg, err := toBytes(requestBody)
 	if err != nil {
-		return bc.throwMetric(method, start, err)
+		return client.throwMetric(method, start, err)
 	}
 	res, err := c.Request(ctx, msg)
 	if err != nil {
-		return bc.throwMetric(method, start, err)
+		return client.throwMetric(method, start, err)
 	}
 	if responsePointer != nil {
 		err := readBody(res, responsePointer)
-		return bc.throwMetric(method, start, err)
+		return client.throwMetric(method, start, err)
 	}
 
-	return bc.throwMetric(method, start, nil)
+	return client.throwMetric(method, start, nil)
 }
 
-func (bc *InternalGrpcClient) Close(errorHandler errorHandler) {
-	for _, c := range bc.clients {
+func (client *InternalGrpcClient) InvokeStream(method string, callerId int, consumer streaming.StreamConsumer) error {
+	md := metadata.Pairs(
+		utils.ProxyMethodNameHeader, method,
+		utils.ApplicationIdHeader, strconv.Itoa(callerId),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	defer cancel()
+
+	conn := client.nextConn()
+	streamClient, err := conn.RequestStream(ctx)
+	if err != nil {
+		return err
+	}
+
+	return consumer(streamClient, md)
+}
+
+func (client *InternalGrpcClient) Close(errorHandler errorHandler) {
+	for _, c := range client.clients {
 		if c == nil {
 			continue
 		}
@@ -73,37 +93,37 @@ func (bc *InternalGrpcClient) Close(errorHandler errorHandler) {
 	}
 }
 
-func (bc *InternalGrpcClient) CloseQuietly() {
-	bc.Close(nil)
+func (client *InternalGrpcClient) CloseQuietly() {
+	client.Close(nil)
 }
 
-func (bc *InternalGrpcClient) WithMetric(catchMetric func(method string, dur time.Duration, err error)) *InternalGrpcClient {
-	bc.metricIntercept = catchMetric
-	return bc
+func (client *InternalGrpcClient) WithMetric(catchMetric func(method string, dur time.Duration, err error)) *InternalGrpcClient {
+	client.metricIntercept = catchMetric
+	return client
 }
 
-func (bc *InternalGrpcClient) Conn() (isp.BackendServiceClient, error) {
-	if bc.length == 0 {
+func (client *InternalGrpcClient) Conn() (isp.BackendServiceClient, error) {
+	if client.length == 0 {
 		return nil, ErrNoAliveConnections
 	}
-	return bc.nextConn(), nil
+	return client.nextConn(), nil
 }
 
-func (bc *InternalGrpcClient) nextConn() isp.BackendServiceClient {
-	if bc.length == 1 {
-		return bc.clients[0]
+func (client *InternalGrpcClient) nextConn() isp.BackendServiceClient {
+	if client.length == 1 {
+		return client.clients[0]
 	}
 
-	bc.mu.Lock()
-	sc := bc.clients[bc.next]
-	bc.next = (bc.next + 1) % bc.length
-	bc.mu.Unlock()
+	client.mu.Lock()
+	sc := client.clients[client.next]
+	client.next = (client.next + 1) % client.length
+	client.mu.Unlock()
 	return sc
 }
 
-func (bc *InternalGrpcClient) throwMetric(method string, start time.Time, err error) error {
-	if bc.metricIntercept != nil {
-		bc.metricIntercept(method, time.Since(start), err)
+func (client *InternalGrpcClient) throwMetric(method string, start time.Time, err error) error {
+	if client.metricIntercept != nil {
+		client.metricIntercept(method, time.Since(start), err)
 	}
 	return err
 }

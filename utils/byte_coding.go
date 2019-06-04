@@ -67,7 +67,7 @@ func ConvertBytesToGo(b []byte, ptr interface{}) error {
 	return ji.Unmarshal(b, ptr)
 }
 
-func ConvertInterfaceToBytes(data interface{}, ctx context.Context) ([]byte, error) {
+func ConvertGoToBytes(data interface{}) ([]byte, error) {
 	return ji.Marshal(data)
 }
 

@@ -53,13 +53,13 @@ func ReadFile(stream DuplexMessageStream, fileFactory func(bf BeginFile) (*os.Fi
 			return bf, err
 		}
 	}
-
-	return bf, nil
 }
 
 func WriteFile(stream DuplexMessageStream, path string, bf BeginFile) error {
 	f, err := os.Open(path)
-	defer f.Close()
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		return err
 	}

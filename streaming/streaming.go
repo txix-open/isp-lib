@@ -22,7 +22,8 @@ type StreamConsumer func(stream DuplexMessageStream, md metadata.MD) error
 type FormData map[string]interface{}
 
 type DuplexMessageStream interface {
-	isp.BackendService_RequestStreamServer
+	Send(*isp.Message) error
+	Recv() (*isp.Message, error)
 }
 
 type BeginFile struct {
@@ -50,7 +51,7 @@ func (bf BeginFile) ToMessage() *isp.Message {
 func (bf *BeginFile) FromMessage(msg *isp.Message) error {
 	s := msg.GetStructBody()
 	if s == nil {
-		return status.Errorf(codes.InvalidArgument, "Could not convert message to BeginFile. Expected a strunt")
+		return status.Errorf(codes.InvalidArgument, "Could not convert message to BeginFile. Expected a struct")
 	}
 
 	fileName, ok := s.Fields["fileName"]
