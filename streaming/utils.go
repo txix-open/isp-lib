@@ -14,7 +14,7 @@ const (
 
 type FileFactory func(bf BeginFile) (*os.File, error)
 
-func ReadFile(stream DuplexMessageStream, fileFactory func(bf BeginFile) (*os.File, error), sendResponse bool) (*BeginFile, error) {
+func ReadFile(stream DuplexMessageStream, fileFactory func(bf BeginFile) (io.WriteCloser, error), sendResponse bool) (*BeginFile, error) {
 	msg, err := stream.Recv()
 	if err != nil {
 		return nil, err
