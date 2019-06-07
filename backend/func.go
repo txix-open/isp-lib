@@ -3,7 +3,9 @@ package backend
 import (
 	isp "github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/utils"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"reflect"
 )
 
@@ -23,7 +25,7 @@ func (f function) unmarshalAndValidateInputData(msg *isp.Message) (interface{}, 
 		dataParam = val.Interface()
 		err := readBody(msg, dataParam)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.InvalidArgument, "invalid request body: %s", err)
 		}
 		err = utils.Validate(dataParam)
 		if err != nil {

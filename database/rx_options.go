@@ -1,5 +1,7 @@
 package database
 
+import "github.com/go-pg/pg"
+
 type Option func(rdc *RxDbClient)
 
 func WithSchemaEnsuring() Option {
@@ -29,5 +31,11 @@ func WithInitializingHandler(handler initHandler) Option {
 func WithSchemaAutoInjecting() Option {
 	return func(rdc *RxDbClient) {
 		rdc.schemaInjecting = true
+	}
+}
+
+func WithQueryHooks(qhs ...pg.QueryHook) Option {
+	return func(rdc *RxDbClient) {
+		rdc.hooks = qhs
 	}
 }

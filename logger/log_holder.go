@@ -124,6 +124,14 @@ func Panicf(format string, args ...interface{}) {
 	terminalLogger.Panicf(format, args)
 }
 
+func Log(level logrus.Level, args ...interface{}) {
+	terminalLogger.Log(level, args...)
+}
+
+func Logf(level logrus.Level, format string, args ...interface{}) {
+	terminalLogger.Logf(level, format, args...)
+}
+
 func FmtAlertMsg(msg string) string {
 	return fmt.Sprintf(alertMsgFormat, strings.ToUpper(msg))
 }

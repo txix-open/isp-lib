@@ -19,9 +19,8 @@ const (
 )
 
 var (
-	dbManagerInstance         = DBManager{isInitialized: false}
-	dbReadOnlyManagerInstance = DBManager{isInitialized: false}
-	ormDbTypeName             = "orm.DB"
+	dbManagerInstance = DBManager{isInitialized: false}
+	ormDbTypeName     = "orm.DB"
 )
 
 type DBManager struct {
@@ -36,24 +35,9 @@ func GetDBManager() *DBManager {
 	return &dbManagerInstance
 }
 
-func GetReadOnlyDBManager() *DBManager {
-	if !dbReadOnlyManagerInstance.isInitialized {
-		logger.Fatal("ReadOnlyDBManager isn't init, call first the \"initReadOnlyDb\" method")
-	}
-	return &dbReadOnlyManagerInstance
-}
-
 func Close() {
 	if dbManagerInstance.Db != nil {
 		if err := dbManagerInstance.Db.Close(); err != nil {
-			logger.Warn(err)
-		}
-	}
-}
-
-func CloseReadOnly() {
-	if dbReadOnlyManagerInstance.Db != nil {
-		if err := dbReadOnlyManagerInstance.Db.Close(); err != nil {
 			logger.Warn(err)
 		}
 	}
@@ -108,44 +92,6 @@ func InitDbV2WithSchema(config structure.DBConfiguration, schema string, callbac
 		return schema + "." + inflection.Plural(s)
 	})
 	callback(GetDBManager())
-}
-
-func initReadOnlyDb(config structure.DBConfiguration) {
-	pdb, err := NewDbConnection(config)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	dbReadOnlyManagerInstance = DBManager{Db: pdb, isInitialized: true}
-}
-
-func InitReadOnlyDbWithSchema(config structure.DBConfiguration, schema string) {
-	initReadOnlyDb(config)
-	dbReadOnlyManagerInstance.Db = withSchema(dbReadOnlyManagerInstance.Db, schema)
-	orm.SetTableNameInflector(func(s string) string {
-		return config.Schema + "." + inflection.Plural(s)
-	})
-}
-
-func InitReadOnlyDbWithCurrentSchema(config structure.DBConfiguration) {
-	initReadOnlyDb(config)
-	dbReadOnlyManagerInstance.Db = withSchema(dbReadOnlyManagerInstance.Db, config.Schema)
-	orm.SetTableNameInflector(func(s string) string {
-		return config.Schema + "." + inflection.Plural(s)
-	})
-}
-
-func InitReadOnlyDbV2(config structure.DBConfiguration, callback func(db *DBManager)) {
-	initReadOnlyDb(config)
-	callback(GetReadOnlyDBManager())
-}
-
-func InitReadOnlyDbV2WithSchema(config structure.DBConfiguration, schema string, callback func(db *DBManager)) {
-	initReadOnlyDb(config)
-	dbReadOnlyManagerInstance.Db = withSchema(dbReadOnlyManagerInstance.Db, schema)
-	orm.SetTableNameInflector(func(s string) string {
-		return schema + "." + inflection.Plural(s)
-	})
-	callback(GetReadOnlyDBManager())
 }
 
 func ResolveMigrationsDirectrory() string {
@@ -207,5 +153,8 @@ func ensureMigrations(config structure.DBConfiguration) error {
 }
 
 func withSchema(pdb *pg.DB, schema string) *pg.DB {
-	return pdb.WithParam(SchemaParam, pg.F(schema))
+	if pdb != nil {
+		return pdb.WithParam(SchemaParam, pg.F(schema))
+	}
+	return nil
 }

@@ -55,7 +55,7 @@ func (b *runner) run() {
 		b.declaratorAcquirer(&declarator{b.sendModuleDeclaration}) //provides module declarator to clients code
 	}
 
-	b.sendModuleConfigSchema() //create and send schema
+	b.sendModuleConfigSchema() //create and send schema with default remote config
 
 	b.ready = false //module not ready state by default
 

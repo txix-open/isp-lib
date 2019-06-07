@@ -31,10 +31,6 @@ const (
 	ProxyMethodNameHeader = "proxy_method_name"
 	MethodDefaultGroup    = "api"
 
-	// ===== ADMIN =====
-	ADMIN_AUTH_HEADER_NAME = "x-auth-admin"
-	DB_SCHEME              = "admin_service"
-
 	ApplicationIdHeader = "x-application-identity"
 	UserIdHeader        = "x-user-identity"
 	DeviceIdHeader      = "x-device-identity"

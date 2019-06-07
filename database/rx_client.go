@@ -40,6 +40,7 @@ type RxDbClient struct {
 	ensMigrations   bool
 	ensSchema       bool
 	schemaInjecting bool
+	hooks           []pg.QueryHook
 }
 
 func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
@@ -85,6 +86,12 @@ func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
 			if ok && rc.schemaInjecting {
 				db = withSchema(db, config.Schema)
 			}
+
+			if len(rc.hooks) > 0 && db != nil {
+				for _, qh := range rc.hooks {
+					db.AddQueryHook(qh)
+				}
+			}
 		}
 
 		if ok && rc.db != nil {
@@ -124,6 +131,10 @@ func (rc *RxDbClient) Visit(v visitor) error {
 	}
 
 	return v(rc.db)
+}
+
+func (rc *RxDbClient) Unsafe() *pg.DB {
+	return rc.db
 }
 
 func (rc *RxDbClient) RunInTransaction(f interface{}) error {

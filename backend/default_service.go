@@ -77,7 +77,7 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 
 	msg = emptyBody
 	if result != nil {
-		msg, err = toBytes(result, ctx)
+		msg, err = toBytes(result)
 	}
 	return msg, err
 }
@@ -195,8 +195,8 @@ func readBody(msg *isp.Message, ptr interface{}) error {
 	}
 }
 
-func toBytes(data interface{}, ctx context.Context) (*isp.Message, error) {
-	bytes, err := utils.ConvertInterfaceToBytes(data, ctx)
+func toBytes(data interface{}) (*isp.Message, error) {
+	bytes, err := utils.ConvertGoToBytes(data)
 	if err != nil {
 		return nil, err
 	}
