@@ -68,17 +68,6 @@ type DBConfiguration struct {
 	CreateSchema bool   `schema:"Enable schema ensuring,Create schema if not exists"`
 }
 
-type SyncLoggerConfig struct {
-	Enable         bool   `schema:"Enable file logging"`
-	Filename       string `json:"filename" yaml:"filename" schema:"File name"`
-	MaxSize        int    `json:"-" yaml:"maxsize"`
-	MaxAge         int    `json:"-" yaml:"maxage"`
-	MaxBackups     int    `json:"-" yaml:"maxbackups"`
-	LocalTime      bool   `json:"-" yaml:"localtime"`
-	Compress       bool   `json:"compress" yaml:"compress"`
-	ImmediateFlush bool   `json:"immediateFlush" yaml:"immediateFlush"`
-}
-
 type NatsConfig struct {
 	ClusterId       string               `valid:"required~Required" schema:"Cluster ID"`
 	Address         AddressConfiguration `valid:"required~Required" schema:"Address"`
