@@ -24,7 +24,6 @@ type FormData map[string]interface{}
 type DuplexMessageStream interface {
 	Send(*isp.Message) error
 	Recv() (*isp.Message, error)
-	CloseSend() error
 }
 
 type BeginFile struct {
