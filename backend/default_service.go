@@ -19,7 +19,9 @@ import (
 
 type ErrorHandler func(err error) (interface{}, error)
 
-type Interceptor func(method string, inputData interface{}, md metadata.MD, proceed func() (interface{}, error)) (interface{}, error)
+type Interceptor func(ctx RequestCtx, proceed func() (interface{}, error)) (interface{}, error)
+
+type PostProcessor func(ctx RequestCtx)
 
 var (
 	metaDataType = reflect.TypeOf(metadata.MD{})
@@ -35,13 +37,19 @@ type DefaultService struct {
 	streamConsumers map[string]streaming.StreamConsumer
 	errHandler      ErrorHandler
 	interceptor     Interceptor
+	pps             []PostProcessor
 }
 
 func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.Message, error) {
+	c := newCtx()
 	defer func() {
 		err := recover()
 		if err != nil {
 			logger.Errorf("panic: %v", err)
+		}
+
+		for _, p := range df.pps {
+			p(c)
 		}
 	}()
 
@@ -50,12 +58,18 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 		return nil, err
 	}
 
+	c.md = md
+	c.method = handler.methodName
+	c.requestBody = msg.GetBytesBody()
+
 	var dataParam interface{}
 	var result interface{}
 	dataParam, err = handler.unmarshalAndValidateInputData(msg)
+	c.err = err
+	c.mappedRequest = dataParam
 	if err == nil {
 		if df.interceptor != nil {
-			result, err = df.interceptor(handler.methodName, dataParam, md, func() (interface{}, error) {
+			result, err = df.interceptor(c, func() (interface{}, error) {
 				return handler.call(dataParam, md)
 			})
 		} else {
@@ -67,18 +81,27 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 		result, err = df.errHandler(err)
 	}
 
+	c.err = err
+	c.mappedResponse = result
+
 	if err != nil {
 		grpcError, mustLog := ResolveError(err)
 		if mustLog {
 			logger.Errorf("Method:%s Error:%v", handler.methodName, err)
 		}
-		return nil, grpcError.Err()
+		err = grpcError.Err()
+	} else {
+		msg = emptyBody
+		if result != nil {
+			msg, err = toBytes(result)
+
+			c.err = err
+			if msg != nil {
+				c.responseBody = msg.GetBytesBody()
+			}
+		}
 	}
 
-	msg = emptyBody
-	if result != nil {
-		msg, err = toBytes(result)
-	}
 	return msg, err
 }
 
@@ -106,6 +129,11 @@ func (df *DefaultService) WithErrorHandler(eh ErrorHandler) *DefaultService {
 
 func (df *DefaultService) WithInterceptor(interceptor Interceptor) *DefaultService {
 	df.interceptor = interceptor
+	return df
+}
+
+func (df *DefaultService) WithPostProcessors(pps ...PostProcessor) *DefaultService {
+	df.pps = pps
 	return df
 }
 

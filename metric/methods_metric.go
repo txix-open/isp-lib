@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/integration-system/isp-lib/backend"
 	"github.com/rcrowley/go-metrics"
-	"google.golang.org/grpc/metadata"
 	"sync"
 	"time"
 )
@@ -81,20 +80,20 @@ func NewMethodMetrics(metricsPrefix string, registry metrics.Registry) *MethodMe
 	}
 }
 
-func WithMetrics(metrics *MethodMetrics, interceptor backend.Interceptor) backend.Interceptor {
-	return func(method string, inputData interface{}, md metadata.MD, proceed func() (interface{}, error)) (interface{}, error) {
+func WithMetrics(metrics *MethodMetrics, next backend.Interceptor) backend.Interceptor {
+	return func(ctx backend.RequestCtx, proceed func() (interface{}, error)) (interface{}, error) {
 		var (
 			resp interface{}
 			err  error
 		)
 		now := time.Now()
-		if interceptor != nil {
-			resp, err = interceptor(method, inputData, md, proceed)
+		if next != nil {
+			resp, err = next(ctx, proceed)
 		} else {
 			resp, err = proceed()
 		}
 		since := time.Since(now)
-		metrics.CatchMetric(method, since, err)
+		metrics.CatchMetric(ctx.Method(), since, err)
 		return resp, err
 	}
 }
