@@ -84,6 +84,10 @@ func WriteFile(stream DuplexMessageStream, path string, bf BeginFile) error {
 		}
 	}
 
+	if err := stream.Send(endFile); err != nil {
+		return err
+	}
+
 	_, err = stream.Recv()
 	switch err {
 	case io.EOF, nil:
