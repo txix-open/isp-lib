@@ -11,7 +11,7 @@ type ValidationErrors struct {
 	Details map[string]string
 }
 
-func validate(value interface{}) error {
+func validate(ctx *Ctx, value interface{}) error {
 	err := utils.ValidateV2(value)
 	if err == nil {
 		return nil

@@ -23,6 +23,8 @@ type Interceptor func(ctx RequestCtx, proceed func() (interface{}, error)) (inte
 
 type PostProcessor func(ctx RequestCtx)
 
+type Validator func(ctx RequestCtx, mappedRequestBody interface{}) error
+
 var (
 	metaDataType = reflect.TypeOf(metadata.MD{})
 	emptyBody    = &isp.Message{
@@ -38,6 +40,7 @@ type DefaultService struct {
 	errHandler      ErrorHandler
 	interceptor     Interceptor
 	pps             []PostProcessor
+	validator       Validator
 }
 
 func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.Message, error) {
@@ -64,7 +67,7 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 
 	var dataParam interface{}
 	var result interface{}
-	dataParam, err = handler.unmarshalAndValidateInputData(msg)
+	dataParam, err = handler.unmarshalAndValidateInputData(msg, c, df.validator)
 	c.err = err
 	c.mappedRequest = dataParam
 	if err == nil {
@@ -137,6 +140,11 @@ func (df *DefaultService) WithPostProcessors(pps ...PostProcessor) *DefaultServi
 	return df
 }
 
+func (df *DefaultService) WithValidator(validator Validator) *DefaultService {
+	df.validator = validator
+	return df
+}
+
 func (df *DefaultService) getHandler(ctx context.Context) (*function, metadata.MD, error) {
 	method, md, err := getMethodName(ctx)
 	if err != nil {
@@ -169,7 +177,11 @@ func (df *DefaultService) getStreamHandler(ctx context.Context) (streaming.Strea
 
 func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
 	funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
-	return &DefaultService{functions: funcs, streamConsumers: streams}
+	return &DefaultService{
+		functions:       funcs,
+		streamConsumers: streams,
+		validator:       validate,
+	}
 }
 
 func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointConfig {

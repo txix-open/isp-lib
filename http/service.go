@@ -39,10 +39,12 @@ type HttpService struct {
 	server            *fasthttp.Server
 	actions           map[string]*funcDesc
 	static            map[string]*content
-	errorMapper       ErrorMapper
-	unimplErrorMapper UnimplMethodErrorMapper
+	errorHandler      ErrorHandler
+	unimplErrorMapper UnimplMethodErrorHandler
 	mws               []Middleware
 	pp                []func(ctx *Ctx)
+	interceptor       Interceptor
+	validator         Validator
 }
 
 func (ss *HttpService) Register(uri, method string, mType MType, handler interface{}) error {
@@ -184,13 +186,13 @@ func (ss *HttpService) handleRestRequest(fd *funcDesc, ctx *Ctx) {
 	}
 
 	if err == nil {
-		result, err = handleRestRequest(fd, ctx)
+		result, err = handleRestRequest(fd, ctx, ss.interceptor, ss.validator)
 	}
 
 	if err != nil {
 		ctx.err = err
-		if ss.errorMapper != nil {
-			result = ss.errorMapper(ctx, err)
+		if ss.errorHandler != nil {
+			result = ss.errorHandler(ctx, err)
 		} else if fault, ok := err.(*RESTFault); ok {
 			result = fault
 			ctx.SetStatusCode(fault.Code)
@@ -222,13 +224,13 @@ func (ss *HttpService) handleSoapRequest(fd *funcDesc, ctx *Ctx) {
 	}
 
 	if err == nil {
-		result, err = handleSoapRequest(fd, ctx)
+		result, err = handleSoapRequest(fd, ctx, ss.interceptor, ss.validator)
 	}
 
 	if err != nil {
 		ctx.err = err
-		if ss.errorMapper != nil {
-			respBody.Body = soap.SOAPBody{Content: ss.errorMapper(ctx, err)}
+		if ss.errorHandler != nil {
+			respBody.Body = soap.SOAPBody{Content: ss.errorHandler(ctx, err)}
 		} else if fault, ok := err.(*soap.SOAPFault); ok {
 			respBody.Body = soap.SOAPBody{Fault: fault}
 			ctx.SetStatusCode(http.StatusInternalServerError)
@@ -247,10 +249,11 @@ func (ss *HttpService) handleSoapRequest(fd *funcDesc, ctx *Ctx) {
 
 func NewService(opts ...Option) *HttpService {
 	ss := &HttpService{
-		actions: make(map[string]*funcDesc),
-		static:  make(map[string]*content),
-		mws:     []Middleware{},
-		pp:      []func(c *Ctx){},
+		actions:   make(map[string]*funcDesc),
+		static:    make(map[string]*content),
+		mws:       []Middleware{},
+		pp:        []func(c *Ctx){},
+		validator: validate,
 	}
 	server := &fasthttp.Server{
 		Handler: ss.handleRequest,
@@ -262,7 +265,7 @@ func NewService(opts ...Option) *HttpService {
 	return ss
 }
 
-func handleSoapRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
+func handleSoapRequest(fd *funcDesc, ctx *Ctx, interceptor Interceptor, validator Validator) (interface{}, error) {
 	params := make([]reflect.Value, fd.inCount)
 	reqBody := &soap.SOAPEnvelope{}
 	if fd.bodyNum != -1 {
@@ -287,14 +290,22 @@ func handleSoapRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
 		return nil, &soap.SOAPFault{Code: "400", String: "Invalid xml request body"}
 	}
 	ctx.mappedRequestBody = reflect.ValueOf(reqBody.Body.Content).Elem().Interface()
-	if err := validate(ctx.mappedRequestBody); err != nil {
-		return nil, err
+	if validator != nil {
+		if err := validator(ctx, ctx.mappedRequestBody); err != nil {
+			return nil, err
+		}
 	}
 
-	return callF(fd, params)
+	if interceptor != nil {
+		return interceptor(ctx, func() (interface{}, error) {
+			return callF(fd, params)
+		})
+	} else {
+		return callF(fd, params)
+	}
 }
 
-func handleRestRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
+func handleRestRequest(fd *funcDesc, ctx *Ctx, interceptor Interceptor, validator Validator) (interface{}, error) {
 	params := make([]reflect.Value, fd.inCount)
 	if fd.bodyNum != -1 {
 		val := reflect.New(fd.inType)
@@ -304,8 +315,10 @@ func handleRestRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
 			return nil, &RESTFault{Code: http.StatusBadRequest, Status: "Invalid json request body"}
 		}
 		ctx.mappedRequestBody = val.Elem().Interface()
-		if err := validate(ctx.mappedRequestBody); err != nil {
-			return nil, err
+		if validator != nil {
+			if err := validator(ctx, ctx.mappedRequestBody); err != nil {
+				return nil, err
+			}
 		}
 		params[fd.bodyNum] = val
 	}
@@ -320,7 +333,13 @@ func handleRestRequest(fd *funcDesc, ctx *Ctx) (interface{}, error) {
 		params[fd.headersNum] = val
 	}
 
-	return callF(fd, params)
+	if interceptor != nil {
+		return interceptor(ctx, func() (interface{}, error) {
+			return callF(fd, params)
+		})
+	} else {
+		return callF(fd, params)
+	}
 }
 
 func callF(fd *funcDesc, params []reflect.Value) (interface{}, error) {

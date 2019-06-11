@@ -2,7 +2,6 @@ package backend
 
 import (
 	isp "github.com/integration-system/isp-lib/proto/stubs"
-	"github.com/integration-system/isp-lib/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -18,7 +17,7 @@ type function struct {
 	methodName    string
 }
 
-func (f function) unmarshalAndValidateInputData(msg *isp.Message) (interface{}, error) {
+func (f function) unmarshalAndValidateInputData(msg *isp.Message, ctx *ctx, validator Validator) (interface{}, error) {
 	var dataParam interface{}
 	if f.dataParamType != nil {
 		val := reflect.New(f.dataParamType)
@@ -27,9 +26,10 @@ func (f function) unmarshalAndValidateInputData(msg *isp.Message) (interface{}, 
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid request body: %s", err)
 		}
-		err = utils.Validate(dataParam)
-		if err != nil {
-			return nil, err
+		if validator != nil {
+			if err := validator(ctx, dataParam); err != nil {
+				return nil, err
+			}
 		}
 		return dataParam, nil
 	}

@@ -4,15 +4,19 @@ import "github.com/valyala/fasthttp"
 
 type Option func(ss *HttpService)
 
-type ErrorMapper func(ctx *Ctx, err error) interface{}
+type ErrorHandler func(ctx *Ctx, err error) interface{}
 
-type UnimplMethodErrorMapper func(ctx *Ctx, actionKey string) interface{}
+type UnimplMethodErrorHandler func(ctx *Ctx, actionKey string) interface{}
 
 type Middleware func(ctx *Ctx) (*Ctx, error)
 
-func WithErrorMapping(em ErrorMapper) Option {
+type Interceptor func(ctx *Ctx, proceed func() (interface{}, error)) (interface{}, error)
+
+type Validator func(ctx *Ctx, mappedRequestBody interface{}) error
+
+func WithErrorHandler(em ErrorHandler) Option {
 	return func(ss *HttpService) {
-		ss.errorMapper = em
+		ss.errorHandler = em
 	}
 }
 
@@ -22,7 +26,7 @@ func WithMiddlewares(mws ...Middleware) Option {
 	}
 }
 
-func WithUnimplErrorMapper(em UnimplMethodErrorMapper) Option {
+func WithUnimplErrorHandler(em UnimplMethodErrorHandler) Option {
 	return func(ss *HttpService) {
 		ss.unimplErrorMapper = em
 	}
@@ -37,5 +41,17 @@ func WithFastHttpEnhancer(enhancer func(s *fasthttp.Server)) Option {
 func WithPostProcessors(pp ...func(c *Ctx)) Option {
 	return func(ss *HttpService) {
 		ss.pp = append(ss.pp, pp...)
+	}
+}
+
+func WithInterceptor(interceptor Interceptor) Option {
+	return func(ss *HttpService) {
+		ss.interceptor = interceptor
+	}
+}
+
+func WithValidator(validator Validator) Option {
+	return func(ss *HttpService) {
+		ss.validator = validator
 	}
 }

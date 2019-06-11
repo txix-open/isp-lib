@@ -54,3 +54,7 @@ func ResolveError(err error) (s *status.Status, ok bool) {
 	}
 	return status.New(codes.Internal, utils.ServiceError), true
 }
+
+func validate(ctx RequestCtx, mappedRequestBody interface{}) error {
+	return utils.Validate(mappedRequestBody)
+}
