@@ -66,7 +66,7 @@ func (mm *MethodMetrics) getOrRegisterErrorCounter(method string) metrics.Counte
 	if d, ok := mm.errorsCounter[method]; ok {
 		return d
 	}
-	d = metrics.GetOrRegisterCounter(fmt.Sprintf("%s.%s", mm.prefix, method), mm.registry)
+	d = metrics.GetOrRegisterCounter(fmt.Sprintf("%s.%s.error", mm.prefix, method), mm.registry)
 	mm.errorsCounter[method] = d
 	return d
 }
