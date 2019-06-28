@@ -71,6 +71,14 @@ func GetRemote() interface{} {
 	return remoteConfigInstance
 }
 
+func UnsafeSetRemote(remoteConfig interface{}) {
+	remoteConfigInstance = remoteConfig
+}
+
+func UnsafeSet(localConfig interface{}) {
+	configInstance = localConfig
+}
+
 func InitConfig(configuration interface{}) interface{} {
 	return InitConfigV2(configuration, false)
 }
