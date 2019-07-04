@@ -116,11 +116,11 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 	}
 	err = consumer(stream, md)
 	if err != nil {
-		err, mustLog := ResolveError(err)
+		status, mustLog := ResolveError(err)
 		if mustLog {
-			logger.Error(err)
+			logger.Error(status.Err())
 		}
-		return err.Err()
+		return status.Err()
 	}
 	return nil
 }
