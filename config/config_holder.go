@@ -99,7 +99,7 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 	}
 
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
-	if err := json.Unmarshal([]byte(newRemoteConfig), &newConfiguration); err == nil {
+	if err := json.Unmarshal([]byte(newRemoteConfig), newConfiguration); err == nil {
 		_ = validateRemoteConfig(newConfiguration)
 		remoteConfigInstance = newConfiguration
 	} else {
