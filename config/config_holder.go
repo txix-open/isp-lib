@@ -85,7 +85,7 @@ func InitConfig(configuration interface{}) interface{} {
 
 func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface{} {
 	configInstance, _ = readConfig(configuration, true)
-	validateLocalConfig(configInstance, true)
+	_ = validateLocalConfig(configInstance, true)
 	if callOnChangeHandler {
 		handleConfigChange(configInstance, nil)
 	}
@@ -97,9 +97,11 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 	if err != nil {
 		logger.Fatal("Could not override remote configuration", err)
 	}
-	if err := json.Unmarshal([]byte(newRemoteConfig), configuration); err == nil {
-		validateRemoteConfig(configuration)
-		remoteConfigInstance = configuration
+
+	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
+	if err := json.Unmarshal([]byte(newRemoteConfig), &newConfiguration); err == nil {
+		_ = validateRemoteConfig(newConfiguration)
+		remoteConfigInstance = newConfiguration
 	} else {
 		logger.Fatal("Invalid remote config json format", err)
 	}

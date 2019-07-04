@@ -45,3 +45,63 @@ func TestRemoteConfigOverride(t *testing.T) {
 
 	assert.Equal(expect, original)
 }
+
+func TestInitRemoteConfig(t *testing.T) {
+	assert := assert.New(t)
+
+	oldConfig, expectedConfig := getFirstConfData()
+	remoteConfig, err := json.Marshal(expectedConfig)
+	assert.NoError(err)
+	assert.Equal(expectedConfig, InitRemoteConfig(oldConfig, string(remoteConfig)))
+
+	secOldConf, secExpConf := getSecondConfData()
+	secRemoteConf, err := json.Marshal(secExpConf)
+	assert.NoError(err)
+	assert.Equal(secExpConf, InitRemoteConfig(secOldConf, string(secRemoteConf)))
+}
+
+func getFirstConfData() (oldConfig, newConfig interface{}) {
+	type supStructure struct {
+		Integer int
+		Varchar string
+	}
+	type config struct {
+		Integer               int
+		Varchar               string
+		SupStructure          supStructure
+		MapStringSupStructure map[string]supStructure
+	}
+	oldConfig = &config{
+		Integer:      1,
+		Varchar:      "one",
+		SupStructure: supStructure{Integer: 1, Varchar: "one"},
+		MapStringSupStructure: map[string]supStructure{
+			"one":   {Integer: 1, Varchar: "one"},
+			"two":   {Integer: 2, Varchar: "two"},
+			"three": {Integer: 3, Varchar: "three"},
+		},
+	}
+	newConfig = &config{
+		Integer: 2,
+		Varchar: "two",
+		MapStringSupStructure: map[string]supStructure{
+			"two":   {Integer: 4, Varchar: "four"},
+			"three": {Integer: 3, Varchar: "three"},
+		},
+	}
+	return oldConfig, newConfig
+}
+
+func getSecondConfData() (oldConfig, newConfig interface{}) {
+	type config struct {
+		Integer int
+		Varchar string
+	}
+	oldConfig = &config{
+		Integer: 1,
+	}
+	newConfig = &config{
+		Varchar: "one",
+	}
+	return oldConfig, newConfig
+}
