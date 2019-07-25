@@ -10,17 +10,14 @@ type JsonRestClient struct {
 }
 
 func (jrc *JsonRestClient) Invoke(method, uri string, headers map[string]string, requestBody, responsePtr interface{}) error {
-	responseBody, err := jrc.do(method, uri, headers, requestBody)
-	if err != nil {
-		return err
-	}
-
-	if responsePtr != nil {
-		if err := json.Unmarshal(responseBody, responsePtr); err != nil {
-			return err
+	return jrc.do(method, uri, headers, requestBody, func(responseBody []byte) error {
+		if responsePtr != nil {
+			if err := json.Unmarshal(responseBody, responsePtr); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (jrc *JsonRestClient) InvokeWithoutHeaders(method, uri string, requestBody, responsePtr interface{}) error {
@@ -36,36 +33,39 @@ func (jrc *JsonRestClient) Get(uri string, responsePtr interface{}) error {
 }
 
 func (jrc *JsonRestClient) InvokeWithDynamicResponse(method, uri string, headers map[string]string, requestBody interface{}) (interface{}, error) {
-	responseBody, err := jrc.do(method, uri, headers, requestBody)
+	var res interface{}
+	err := jrc.do(method, uri, headers, requestBody, func(responseBody []byte) error {
+		if len(responseBody) == 0 {
+			return nil
+		}
+
+		if responseBody[0] == '{' {
+			res = make(map[string]interface{}, 0)
+			if err := json.Unmarshal(responseBody, &res); err != nil {
+				return err
+			}
+			return nil
+		} else if responseBody[0] == '[' {
+			res = make([]interface{}, 0)
+			if err := json.Unmarshal(responseBody, &res); err != nil {
+				return err
+			}
+			return nil
+		} else {
+			res = map[string]string{"response": string(responseBody)}
+			return nil
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if len(responseBody) == 0 {
-		return nil, nil
-	}
-
-	if responseBody[0] == '{' {
-		var res map[string]interface{}
-		if err := json.Unmarshal(responseBody, &res); err != nil {
-			return nil, err
-		}
-		return res, nil
-	} else if responseBody[0] == '[' {
-		var res []interface{}
-		if err := json.Unmarshal(responseBody, &res); err != nil {
-			return nil, err
-		}
-		return res, nil
-	} else {
-		return map[string]string{"response": string(responseBody)}, nil
-	}
+	return res, nil
 }
 
-func (jrc *JsonRestClient) do(method, uri string, headers map[string]string, requestBody interface{}) ([]byte, error) {
+func (jrc *JsonRestClient) do(method, uri string, headers map[string]string, requestBody interface{}, respBodyHandler func([]byte) error) error {
 	body, err := prepareRequestBody(requestBody)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	req := fasthttp.AcquireRequest()
@@ -76,14 +76,14 @@ func (jrc *JsonRestClient) do(method, uri string, headers map[string]string, req
 	prepareRequest(req, method, uri, headers, body)
 
 	if err := jrc.c.DoTimeout(req, res, 15*time.Second); err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := checkResponseStatusCode(res); err != nil {
-		return nil, err
+		return err
 	}
 
-	return res.Body(), nil
+	return respBodyHandler(res.Body())
 }
 
 func NewJsonRestClient() RestClient {
