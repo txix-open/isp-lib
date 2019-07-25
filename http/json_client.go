@@ -5,8 +5,23 @@ import (
 	"time"
 )
 
+type JsonRestClientOption func(client *JsonRestClient)
+
+func WithFasttHttpEnchacer(f func(*fasthttp.Client)) JsonRestClientOption {
+	return func(client *JsonRestClient) {
+		f(client.c)
+	}
+}
+
+func WithDefaultTimeout(timeout time.Duration) JsonRestClientOption {
+	return func(client *JsonRestClient) {
+		client.defaultTimeout = timeout
+	}
+}
+
 type JsonRestClient struct {
-	c *fasthttp.Client
+	c              *fasthttp.Client
+	defaultTimeout time.Duration
 }
 
 func (jrc *JsonRestClient) Invoke(method, uri string, headers map[string]string, requestBody, responsePtr interface{}) error {
@@ -75,7 +90,7 @@ func (jrc *JsonRestClient) do(method, uri string, headers map[string]string, req
 
 	prepareRequest(req, method, uri, headers, body)
 
-	if err := jrc.c.DoTimeout(req, res, 15*time.Second); err != nil {
+	if err := jrc.c.DoTimeout(req, res, jrc.defaultTimeout); err != nil {
 		return err
 	}
 
@@ -86,8 +101,17 @@ func (jrc *JsonRestClient) do(method, uri string, headers map[string]string, req
 	return respBodyHandler(res.Body())
 }
 
-func NewJsonRestClient() RestClient {
-	return &JsonRestClient{c: &fasthttp.Client{}}
+func NewJsonRestClient(opts ...JsonRestClientOption) RestClient {
+	client := &JsonRestClient{
+		c:              &fasthttp.Client{},
+		defaultTimeout: 15 * time.Second,
+	}
+
+	for _, opt := range opts {
+		opt(client)
+	}
+
+	return client
 }
 
 func prepareRequestBody(requestBody interface{}) ([]byte, error) {
