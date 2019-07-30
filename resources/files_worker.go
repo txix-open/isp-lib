@@ -101,7 +101,7 @@ func makeReaders(path string, csvSep rune) (*os.File, *gzip.Reader, *csv.Reader,
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		err = status.Errorf(codes.InvalidArgument, "invalid gzip format")
-		logger.Error(err)
+		_ = file.Close()
 		return nil, nil, nil, err
 	}
 
