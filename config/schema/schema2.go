@@ -2,6 +2,7 @@ package schema
 
 import (
 	"github.com/integration-system/jsonschema"
+	"github.com/mohae/deepcopy"
 	"strings"
 )
 
@@ -30,59 +31,71 @@ func GenerateConfigSchema(cfgPtr interface{}) Schema {
 }
 
 func DereferenceSchema(s Schema) Schema {
-	for k, def := range s.Definitions {
-		s.Definitions[k] = replaceRef(def, s.Definitions)
-	}
-
-	s.Type = replaceRef(s.Type, s.Definitions)
+	cache := make(jsonschema.Definitions)
+	s.Type = dereferenceType(s.Type, s.Definitions, cache)
+	s.Definitions = nil
 	return s
 }
 
-func replaceRef(def *jsonschema.Type, definitions jsonschema.Definitions) *jsonschema.Type {
-	if def != nil {
-		if def.Ref != "" {
-			tp := strings.TrimPrefix(def.Ref, "#/definitions/")
-			def = definitions[tp]
+func dereferenceType(t *jsonschema.Type, definitions, cache jsonschema.Definitions) *jsonschema.Type {
+	toDeref := t
+	ref := strings.TrimPrefix(t.Ref, "#/definitions/")
+	if ref != "" {
+		if dereferenced, ok := cache[ref]; ok {
+			copied := &(*dereferenced)
+			copied.Title = t.Title
+			copied.Description = t.Description
+			copied.Default = t.Default
+			return copied
 		}
-		if def.Items != nil && def.Items.Ref != "" {
-			tp := strings.TrimPrefix(def.Items.Ref, "#/definitions/")
-			def.Items = definitions[tp]
+
+		def, ok := definitions[ref]
+		if !ok {
+			return t
 		}
-		for k, patternProp := range def.PatternProperties {
-			if patternProp.Ref != "" {
-				tp := strings.TrimPrefix(patternProp.Ref, "#/definitions/")
-				def.PatternProperties[k] = definitions[tp]
-			}
-		}
-		for k, dep := range def.Dependencies {
-			if dep.Ref != "" {
-				tp := strings.TrimPrefix(dep.Ref, "#/definitions/")
-				def.Dependencies[k] = definitions[tp]
-			}
-		}
-		for k, v := range def.AllOf {
-			if v.Ref != "" {
-				tp := strings.TrimPrefix(v.Ref, "#/definitions/")
-				def.AllOf[k] = definitions[tp]
-			}
-		}
-		for k, v := range def.AnyOf {
-			if v.Ref != "" {
-				tp := strings.TrimPrefix(v.Ref, "#/definitions/")
-				def.AnyOf[k] = definitions[tp]
-			}
-		}
-		for k, v := range def.OneOf {
-			if v.Ref != "" {
-				tp := strings.TrimPrefix(v.Ref, "#/definitions/")
-				def.OneOf[k] = definitions[tp]
-			}
-		}
-		replaceRef(def.Not, definitions)
-		replaceRef(def.Media, definitions)
-		for k, prop := range def.Properties {
-			def.Properties[k] = replaceRef(prop, definitions)
-		}
+		def = deepcopy.Copy(def).(*jsonschema.Type)
+		toDeref = def
 	}
-	return def
+
+	if toDeref.Items != nil {
+		toDeref.Items = dereferenceType(toDeref.Items, definitions, cache)
+	}
+	if toDeref.AdditionalItems != nil {
+		toDeref.AdditionalItems = dereferenceType(toDeref.AdditionalItems, definitions, cache)
+	}
+	if toDeref.Not != nil {
+		toDeref.Not = dereferenceType(toDeref.Not, definitions, cache)
+	}
+	toDeref.Properties = derefMap(toDeref.Properties, definitions, cache)
+	toDeref.PatternProperties = derefMap(toDeref.PatternProperties, definitions, cache)
+	toDeref.Dependencies = derefMap(toDeref.Dependencies, definitions, cache)
+	toDeref.OneOf = derefArray(toDeref.OneOf, definitions, cache)
+	toDeref.AllOf = derefArray(toDeref.AllOf, definitions, cache)
+	toDeref.AnyOf = derefArray(toDeref.AnyOf, definitions, cache)
+
+	if ref != "" {
+		cache[ref] = toDeref
+
+		copied := &(*toDeref)
+		copied.Title = t.Title
+		copied.Description = t.Description
+		copied.Default = t.Default
+		return copied
+	}
+
+	return toDeref
+}
+
+func derefArray(arr []*jsonschema.Type, definitions, cache jsonschema.Definitions) []*jsonschema.Type {
+	for i, t := range arr {
+		arr[i] = dereferenceType(t, definitions, cache)
+	}
+	return arr
+}
+
+func derefMap(m map[string]*jsonschema.Type, definitions, cache jsonschema.Definitions) map[string]*jsonschema.Type {
+	for key, t := range m {
+		m[key] = dereferenceType(t, definitions, cache)
+	}
+	return m
 }
