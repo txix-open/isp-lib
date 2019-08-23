@@ -42,11 +42,11 @@ func dereferenceType(t *jsonschema.Type, definitions, cache jsonschema.Definitio
 	ref := strings.TrimPrefix(t.Ref, "#/definitions/")
 	if ref != "" {
 		if dereferenced, ok := cache[ref]; ok {
-			copied := &(*dereferenced)
+			copied := *dereferenced
 			copied.Title = t.Title
 			copied.Description = t.Description
 			copied.Default = t.Default
-			return copied
+			return &copied
 		}
 
 		def, ok := definitions[ref]
@@ -76,11 +76,11 @@ func dereferenceType(t *jsonschema.Type, definitions, cache jsonschema.Definitio
 	if ref != "" {
 		cache[ref] = toDeref
 
-		copied := &(*toDeref)
+		copied := *toDeref
 		copied.Title = t.Title
 		copied.Description = t.Description
 		copied.Default = t.Default
-		return copied
+		return &copied
 	}
 
 	return toDeref

@@ -66,5 +66,4 @@ func TestGenerateConfigSchema(t *testing.T) {
 		json1, _ := json.MarshalIndent(got, "", "\t")
 		fmt.Println(string(json1))
 	}
-
 }
