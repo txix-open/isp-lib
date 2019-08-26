@@ -81,15 +81,15 @@ func setValidators(field reflect.StructField, t *jsonschema.Type) {
 				}
 				if len(args) > 1 {
 					if val, err := strconv.Atoi(args[1]); err == nil {
-						t.MinLength = val
+						t.MaxLength = val
 					}
 				}
 			}
 		case "in":
 			if len(args) > 0 {
-				enum := make([]interface{}, len(args))
-				for i, a := range args {
-					enum[i] = a
+				vals := strings.Split(args[0], "|")
+				for _, val := range vals {
+					t.Enum = append(t.Enum, val)
 				}
 			}
 		case "range":
