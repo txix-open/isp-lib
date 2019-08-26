@@ -8,20 +8,20 @@ import (
 
 type MetricAddress struct {
 	AddressConfiguration
-	Path string `json:"path"`
+	Path string `json:"path" schema:"Путь,путь, по которому доступны метрики"`
 }
 
 type MetricConfiguration struct {
-	Address                MetricAddress `json:"address" schema:"Metric HTTP server"`
-	Gc                     bool          `json:"gc" schema:"Collect garbage collecting statistic"`
-	CollectingGCPeriod     int32         `json:"collectingGCPeriod" schema:"GC stat collecting interval,In seconds, default: 10"`
-	Memory                 bool          `json:"memory" schema:"Collect memory statistic"`
-	CollectingMemoryPeriod int32         `json:"collectingMemoryPeriod" schema:"Memory stat collecting interval,In seconds, default: 10"`
+	Address                MetricAddress `json:"address" schema:"Адрес HTTP сервера для публикации метрик"`
+	Gc                     bool          `json:"gc" schema:"Статистика по работе сборщика мусора,включение/отключение сбора статистики"`
+	CollectingGCPeriod     int32         `json:"collectingGCPeriod" schema:"Интервал сбора статистики по работе сборщика мусор,значение в секундах, через которое происходит повторный сбор статистики, по умолчанию: 10"`
+	Memory                 bool          `json:"memory" schema:"Статиста по памяти,включение/отключение сбора статистики"`
+	CollectingMemoryPeriod int32         `json:"collectingMemoryPeriod" schema:"Интервал сбора статистики по памяти,значение в секундах, через которое происходит повторный сбор статистики, по умолчанию: 10"`
 }
 
 type AddressConfiguration struct {
-	Port string `json:"port" schema:"Port"`
-	IP   string `json:"ip" schema:"Host"`
+	Port string `json:"port" schema:"Порт"`
+	IP   string `json:"ip" schema:"Хост"`
 }
 
 func (addressConfiguration *AddressConfiguration) GetAddress() string {
@@ -29,16 +29,16 @@ func (addressConfiguration *AddressConfiguration) GetAddress() string {
 }
 
 type RedisConfiguration struct {
-	Address   AddressConfiguration `schema:"Address"`
-	Password  string               `schema:"Password"`
-	DefaultDB int                  `schema:"Default database"`
+	Address   AddressConfiguration `schema:"Адрес Redis"`
+	Password  string               `schema:"Пароль"`
+	DefaultDB int                  `schema:"База данных по умолчанию"`
 }
 
 type RabbitConfig struct {
-	Address  AddressConfiguration `valid:"required~Required" schema:"Address"`
-	Vhost    string               `schema:"Vhost"`
-	User     string               `schema:"Username"`
-	Password string               `schema:"Password"`
+	Address  AddressConfiguration `valid:"required~Required" schema:"Адрес RabbitMQ"`
+	Vhost    string               `schema:"Виртуальный хост,для изоляции очередей"`
+	User     string               `schema:"Логин"`
+	Password string               `schema:"Пароль"`
 }
 
 func (rc RabbitConfig) GetUri() string {
@@ -58,42 +58,39 @@ func (rc RabbitConfig) ReconnectionTimeout() time.Duration {
 }
 
 type DBConfiguration struct {
-	Address      string `valid:"required~Required" schema:"Host"`
-	Schema       string `valid:"required~Required" schema:"Schema"`
-	Database     string `valid:"required~Required" schema:"Database"`
-	Port         string `valid:"required~Required" schema:"Port"`
-	Username     string `schema:"Username"`
-	Password     string `schema:"Password"`
-	PoolSize     int    `schema:"Connection pool size,Default is 10 connections per every CPU"`
-	CreateSchema bool   `schema:"Enable schema ensuring,Create schema if not exists"`
+	Address      string `valid:"required~Required" schema:"Адрес"`
+	Schema       string `valid:"required~Required" schema:"Схема"`
+	Database     string `valid:"required~Required" schema:"Название базы данных"`
+	Port         string `valid:"required~Required" schema:"Порт"`
+	Username     string `schema:"Логин"`
+	Password     string `schema:"Пароль"`
+	PoolSize     int    `schema:"Количество соединений в пуле,по умолчанию 10 соединений на каждое ядро"`
+	CreateSchema bool   `schema:"Создание схемы,если включено, создает схему, если ее не существует"`
 }
 
 type NatsConfig struct {
-	ClusterId       string               `valid:"required~Required" schema:"Cluster ID"`
-	Address         AddressConfiguration `valid:"required~Required" schema:"Address"`
-	PingAttempts    int                  `schema:"Max ping attempts,When max attempts is reached connection is closed"`
-	PintIntervalSec int                  `schema:"Ping interval,In seconds"`
+	ClusterId       string               `valid:"required~Required" schema:"Идентификатор кластера"`
+	Address         AddressConfiguration `valid:"required~Required" schema:"Адрес Nats"`
+	PingAttempts    int                  `schema:"Максимальное количество попыток соединения,когда будет достигнут максимальное значение количества попыток соединение будет закрыто"`
+	PintIntervalSec int                  `schema:"Интервал проверки соединения,значение в секундах, через которое происходит проверка соединения"`
 	ClientId        string               `json:"-"`
 }
 
 type SocketConfiguration struct {
-	Host             string
-	Port             string
-	Path             string
-	Secure           bool
-	UrlParams        map[string]string
-	ConnectionString string
+	Host             string            `schema:"Хост"`
+	Port             string            `schema:"Порт"`
+	Path             string            `schema:"Путь"`
+	Secure           bool              `schema:"Защищенное соединение,если включено используется https"`
+	UrlParams        map[string]string `schema:"Параметры,"`
+	ConnectionString string            `schema:"Строка соединения"`
 }
 
 type ElasticConfiguration struct {
-	URL         string
-	Username    string
-	Password    string
-	Sniff       *bool
-	Healthcheck *bool
-	Infolog     string
-	Errorlog    string
-	Tracelog    string
+	URL         string `schema:"Адрес"`
+	Username    string `schema:"Логин"`
+	Password    string `schema:"Пароль"`
+	Sniff       *bool  `schema:"Механизм поиска нод в кластере,если включено, клиент подключается ко всем нодам в кластере"`
+	Healthcheck *bool  `schema:"Проверка работоспособности нод,если включено, пингует ноды"`
 }
 
 func (ec *ElasticConfiguration) ConvertTo(elasticConfigPtr interface{}) error {
