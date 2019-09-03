@@ -10,6 +10,12 @@ import (
 	"unicode"
 )
 
+const (
+	tagDefault      = "default"
+	tagSchema       = "schema"
+	tagCustomSchema = "schemaGen"
+)
+
 func GetNameAndRequiredFlag(field reflect.StructField) (string, bool) {
 	if field.PkgPath != "" { // unexported field, ignore it
 		return "", false
@@ -29,7 +35,7 @@ func GetNameAndRequiredFlag(field reflect.StructField) (string, bool) {
 }
 
 func SetProperties(field reflect.StructField, t *jsonschema.Type) {
-	schema, ok := field.Tag.Lookup(schemaTag)
+	schema, ok := field.Tag.Lookup(tagSchema)
 	if ok {
 		parts := strings.SplitN(schema, ",", 2)
 		if len(parts) > 0 {
@@ -42,9 +48,14 @@ func SetProperties(field reflect.StructField, t *jsonschema.Type) {
 		}
 	}
 
-	defaultValue, ok := field.Tag.Lookup("default")
-	if ok {
+	if defaultValue, ok := field.Tag.Lookup(tagDefault); ok {
 		t.Default = defaultValue
+	}
+
+	if customValue, ok := field.Tag.Lookup(tagCustomSchema); ok {
+		if f := Custom.getFunctionByName(customValue); f != nil {
+			defer f(t)
+		}
 	}
 
 	setValidators(field, t)

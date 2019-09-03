@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	schemaTag = "schema"
-)
-
 type Schema *jsonschema.Schema
 
 type ConfigSchema struct {
