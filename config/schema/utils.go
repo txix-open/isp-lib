@@ -52,13 +52,13 @@ func SetProperties(field reflect.StructField, t *jsonschema.Type) {
 		t.Default = defaultValue
 	}
 
+	setValidators(field, t)
+
 	if customValue, ok := field.Tag.Lookup(tagCustomSchema); ok {
-		if f := Custom.getFunctionByName(customValue); f != nil {
-			defer f(t)
+		if f := CustomGenerators.getGeneratorByName(customValue); f != nil {
+			f(field, t)
 		}
 	}
-
-	setValidators(field, t)
 }
 
 func setValidators(field reflect.StructField, t *jsonschema.Type) {
