@@ -17,7 +17,7 @@ var CustomGenerators = &customSchema{
 	mapSchema: make(map[string]generator),
 }
 
-func (c *customSchema) Register(name string, f func(t *jsonschema.Type)) {
+func (c *customSchema) Register(name string, f generator) {
 	c.mx.Lock()
 	c.mapSchema[name] = f
 	c.mx.Unlock()
