@@ -176,7 +176,7 @@ func (b *runner) initSocketConnection() {
 	socketConfig := b.makeSocketConfig(b.localConfigPtr)
 	builder := gosocketio.NewClientBuilder().
 		EnableReconnection().
-		ReconnectionTimeout(3*time.Second).
+		ReconnectionTimeout(200*time.Millisecond).
 		OnReconnectionError(func(err error) {
 			logger.Warnf("SocketIO reconnection error: %v", err)
 			b.lastFailedConnectionTime = time.Now()
@@ -187,8 +187,11 @@ func (b *runner) initSocketConnection() {
 			b.disconnectChan <- struct{}{}
 			return nil
 		}, nil)
-	connectionString := socket.GetConnectionString(socketConfig)
-	c := builder.BuildToConnect(connectionString)
+	connectionStrings, err := socket.GetConnectionStrings(socketConfig)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	c := builder.BuildToConnectMany(connectionStrings)
 
 	if b.onSocketErrorReceive != nil {
 		must(c.On(utils.ErrorConnection, handleError(b.onSocketErrorReceive, utils.ErrorConnection)))
@@ -213,7 +216,7 @@ func (b *runner) initSocketConnection() {
 		must(c.On(e, f))
 	}
 
-	err := c.Dial()
+	err = c.Dial()
 	for err != nil {
 		logger.Warnf("Could not connect to SocketIO: %v", err)
 		b.lastFailedConnectionTime = time.Now()
@@ -221,7 +224,7 @@ func (b *runner) initSocketConnection() {
 		select {
 		case <-b.exitChan:
 			return
-		case <-time.After(3 * time.Second):
+		case <-time.After(200 * time.Millisecond):
 
 		}
 		err = c.Dial()

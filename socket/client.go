@@ -1,10 +1,13 @@
 package socket
 
 import (
+	"errors"
+	"fmt"
 	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,4 +62,27 @@ func GetConnectionString(sc structure.SocketConfiguration) string {
 		)
 	}
 	return connectionString
+}
+
+func GetConnectionStrings(sc structure.SocketConfiguration) ([]string, error) {
+	hosts := strings.Split(sc.Host, ";")
+	ports := strings.Split(sc.Port, ";")
+	if len(hosts) != len(ports) {
+		return nil, errors.New(fmt.Sprintf("Different number of hosts/ports: %n/%n", len(hosts), len(ports)))
+	}
+	connStrings := make([]string, len(hosts))
+	for i := 0; i < len(hosts); i++ {
+		port, err := strconv.Atoi(ports[i])
+		if err != nil {
+			return nil, err
+		}
+		connectionString := gosocketio.GetUrl(
+			hosts[i],
+			port,
+			sc.Secure,
+			sc.UrlParams,
+		)
+		connStrings[i] = connectionString
+	}
+	return connStrings, nil
 }
