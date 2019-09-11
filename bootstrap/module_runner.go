@@ -9,7 +9,6 @@ import (
 	"github.com/integration-system/isp-lib/config/schema"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/metric"
-	"github.com/integration-system/isp-lib/socket"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
 	"github.com/mohae/deepcopy"
@@ -17,6 +16,11 @@ import (
 	"os"
 	"strings"
 	"time"
+)
+
+const (
+	defaultConfigServiceConnectionTimeout = 1 * time.Second
+	defaultRemoteConfigAwaitTimeout       = 3 * time.Second
 )
 
 type runner struct {
@@ -60,8 +64,8 @@ func (b *runner) run() {
 	b.ready = false //module not ready state by default
 
 	remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules := b.initialState()
-	remoteConfigTimeoutChan := time.After(3 * time.Second) //used for log WARN message
-	neverTriggerChan := make(chan time.Time)               //used for stops log flood
+	remoteConfigTimeoutChan := time.After(defaultRemoteConfigAwaitTimeout) //used for log WARN message
+	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
 	initChan := make(chan struct{}, 1)
 	//in main goroutine handle all asynchronous events from config service
 	for {
@@ -88,7 +92,7 @@ func (b *runner) run() {
 			remoteConfigTimeoutChan = neverTriggerChan //stop flooding in logs
 		case <-remoteConfigTimeoutChan:
 			logger.Warn("Remote config isn't received")
-			remoteConfigTimeoutChan = time.After(3 * time.Second)
+			remoteConfigTimeoutChan = time.After(defaultRemoteConfigAwaitTimeout)
 		case routers := <-b.routesChan:
 			if b.onRoutesReceive != nil {
 				routesReady = b.onRoutesReceive(routers)
@@ -176,7 +180,7 @@ func (b *runner) initSocketConnection() {
 	socketConfig := b.makeSocketConfig(b.localConfigPtr)
 	builder := gosocketio.NewClientBuilder().
 		EnableReconnection().
-		ReconnectionTimeout(200*time.Millisecond).
+		ReconnectionTimeout(defaultConfigServiceConnectionTimeout).
 		OnReconnectionError(func(err error) {
 			logger.Warnf("SocketIO reconnection error: %v", err)
 			b.lastFailedConnectionTime = time.Now()
@@ -187,7 +191,7 @@ func (b *runner) initSocketConnection() {
 			b.disconnectChan <- struct{}{}
 			return nil
 		}, nil)
-	connectionStrings, err := socket.GetConnectionStrings(socketConfig)
+	connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -224,7 +228,7 @@ func (b *runner) initSocketConnection() {
 		select {
 		case <-b.exitChan:
 			return
-		case <-time.After(200 * time.Millisecond):
+		case <-time.After(defaultConfigServiceConnectionTimeout):
 
 		}
 		err = c.Dial()
