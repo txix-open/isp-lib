@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/streaming"
@@ -33,7 +34,7 @@ type InternalGrpcClient struct {
 	metricIntercept func(method string, dur time.Duration, err error)
 }
 
-func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
+func (client *InternalGrpcClient) doInvoke(method string, callerId int, requestBody interface{}, responseHandler func(*isp.Message, time.Time) error, mdPairs ...string) error {
 	md := metadata.Pairs(
 		utils.ProxyMethodNameHeader, method,
 		utils.ApplicationIdHeader, strconv.Itoa(callerId),
@@ -46,21 +47,60 @@ func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBod
 	defer cancel()
 
 	start := time.Now()
+
 	c := client.nextConn()
 	msg, err := toBytes(requestBody)
 	if err != nil {
 		return client.throwMetric(method, start, err)
 	}
-	res, err := c.Request(ctx, msg)
-	if err != nil {
+	if res, err := c.Request(ctx, msg); err != nil {
 		return client.throwMetric(method, start, err)
-	}
-	if responsePointer != nil {
-		err := readBody(res, responsePointer)
-		return client.throwMetric(method, start, err)
+	} else {
+		return responseHandler(res, start)
 	}
 
-	return client.throwMetric(method, start, nil)
+}
+
+func (client *InternalGrpcClient) InvokeWithDynamicStruct(method string, callerId int, requestBody interface{}, mdPairs ...string) (interface{}, error) {
+	var (
+		resp interface{}
+		t    time.Time
+	)
+	if err := client.doInvoke(method, callerId, requestBody, func(res *isp.Message, start time.Time) error {
+		t = start
+		bytes := res.GetBytesBody()
+		if len(bytes) != 0 {
+			switch bytes[0] {
+			case '{':
+				resp = make(map[string]interface{}, 0)
+				if err := json.Unmarshal(bytes, &resp); err != nil {
+					return err
+				}
+			case '[':
+				resp = make([]interface{}, 0)
+				if err := json.Unmarshal(bytes, &resp); err != nil {
+					return err
+				}
+			default:
+				resp = map[string]string{"response": string(bytes)}
+			}
+		}
+		return nil
+	}, mdPairs...); err != nil {
+		return nil, err
+	} else {
+		return resp, client.throwMetric(method, t, nil)
+	}
+}
+
+func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
+	return client.doInvoke(method, callerId, requestBody, func(res *isp.Message, start time.Time) error {
+		if responsePointer != nil {
+			err := readBody(res, responsePointer)
+			return client.throwMetric(method, start, err)
+		}
+		return client.throwMetric(method, start, nil)
+	}, mdPairs...)
 }
 
 func (client *InternalGrpcClient) InvokeStream(method string, callerId int, consumer streaming.StreamConsumer) error {
