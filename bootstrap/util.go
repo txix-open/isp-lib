@@ -9,6 +9,7 @@ import (
 	"github.com/integration-system/isp-lib/structure"
 	"net"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -102,4 +103,41 @@ func getJsonModuleDeclaration(moduleInfo ModuleInfo) ([]byte, error) {
 	}
 
 	return json.Marshal(declaration)
+}
+
+func getConfigServiceConnectionString(sc structure.SocketConfiguration) string {
+	connectionString := sc.ConnectionString
+	port, _ := strconv.Atoi(sc.Port)
+	if connectionString == "" {
+		connectionString = gosocketio.GetUrl(
+			sc.Host,
+			port,
+			sc.Secure,
+			sc.UrlParams,
+		)
+	}
+	return connectionString
+}
+
+func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]string, error) {
+	hosts := strings.Split(sc.Host, ";")
+	ports := strings.Split(sc.Port, ";")
+	if len(hosts) != len(ports) {
+		return nil, fmt.Errorf("different number of hosts/ports: %d/%d", len(hosts), len(ports))
+	}
+	connStrings := make([]string, len(hosts))
+	for i := 0; i < len(hosts); i++ {
+		port, err := strconv.Atoi(ports[i])
+		if err != nil {
+			return nil, err
+		}
+		connectionString := gosocketio.GetUrl(
+			hosts[i],
+			port,
+			sc.Secure,
+			sc.UrlParams,
+		)
+		connStrings[i] = connectionString
+	}
+	return connStrings, nil
 }
