@@ -1,6 +1,8 @@
 package nats
 
-import "github.com/nats-io/go-nats-streaming"
+import (
+	"github.com/nats-io/stan.go"
+)
 
 type DurableSub struct {
 	owner *NatsClient

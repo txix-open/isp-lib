@@ -87,7 +87,7 @@
   version = "v6.15.3"
 
 [[projects]]
-  digest = "1:4652941215f23c7ad6546bab86964c72248a1134baa53f0df618661344ba5cac"
+  digest = "1:877b9eedd8a92d456a213fe85fb8c6d178cb2bc499e86ec5b7f0bcc05d121e54"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -95,8 +95,8 @@
     "protoc-gen-gogo/descriptor",
   ]
   pruneopts = "UT"
-  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
-  version = "v1.2.1"
+  revision = "0ca988a254f991240804bf9821f3450d87ccbb1b"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:b532ee3f683c057e797694b5bfeb3827d89e6adf41c53dbc80e549bca76364ea"
@@ -331,27 +331,16 @@
   revision = "c48cc78d482608239f6c4c92a4abd87eb8761c90"
 
 [[projects]]
-  digest = "1:2ca73053216eb11c8eea2855c8099ad82773638522f91cc0542ec9759163ff3c"
-  name = "github.com/nats-io/go-nats"
+  digest = "1:8de5a74ac9ff41ba07e18c5053ab631549b46bb3064ddba30027e774af1ff31f"
+  name = "github.com/nats-io/nats.go"
   packages = [
     ".",
     "encoders/builtin",
     "util",
   ]
   pruneopts = "UT"
-  revision = "70fe06cee50d4b6f98248d9675fb55f2a3aa7228"
-  version = "v1.7.2"
-
-[[projects]]
-  digest = "1:25a0458641a719a972fa7850c900aaae6b12e74efa6fe35c9bd7a772543bc635"
-  name = "github.com/nats-io/go-nats-streaming"
-  packages = [
-    ".",
-    "pb",
-  ]
-  pruneopts = "UT"
-  revision = "7cd94c239033c0405a43454be55a0810d3a3ca89"
-  version = "v0.4.4"
+  revision = "e2837a2879e82886f6e21715e3a0217fdc46d370"
+  version = "v1.8.1"
 
 [[projects]]
   digest = "1:237d85e4f5e91ac6cfc13bad508627570ff29efa28f523d41aac2d39ca15950f"
@@ -368,6 +357,17 @@
   pruneopts = "UT"
   revision = "4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94"
   version = "v1.0.1"
+
+[[projects]]
+  digest = "1:b43bdaf67be5526c356fd4daa12eddda995aaba762f436ecc326ffca788f0963"
+  name = "github.com/nats-io/stan.go"
+  packages = [
+    ".",
+    "pb",
+  ]
+  pruneopts = "UT"
+  revision = "c5efdc3e2330fb9c81f34082d0c04a8de817748a"
+  version = "v0.5.0"
 
 [[projects]]
   digest = "1:93131d8002d7025da13582877c32d1fc302486775a1b06f62241741006428c5e"
@@ -678,8 +678,8 @@
     "github.com/lib/pq",
     "github.com/modern-go/reflect2",
     "github.com/mohae/deepcopy",
-    "github.com/nats-io/go-nats",
-    "github.com/nats-io/go-nats-streaming",
+    "github.com/nats-io/nats.go",
+    "github.com/nats-io/stan.go",
     "github.com/pkg/errors",
     "github.com/pressly/goose",
     "github.com/rcrowley/go-metrics",

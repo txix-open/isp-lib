@@ -2,8 +2,8 @@ package nats
 
 import (
 	"github.com/integration-system/isp-lib/structure"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats-streaming"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/stan.go"
 	"github.com/pkg/errors"
 	"math"
 	"sync"
