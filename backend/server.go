@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"errors"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/structure"
@@ -83,16 +84,20 @@ func StopGrpcServer() {
 	}
 }
 
-func UpdateHandlers(methodPrefix string, handlersStructs ...interface{}) {
+func UpdateHandlers(methodPrefix string, handlersStructs ...interface{}) error {
 	lock.Lock()
 	defer lock.Unlock()
 
 	if server != nil {
-		funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
+		funcs, streams, err := resolveHandlers(methodPrefix, handlersStructs...)
+		if err != nil {
+			return err
+		}
 		server.service.functions = funcs
 		server.service.streamConsumers = streams
+		return nil
 	} else {
-		logger.Fatal("Grpc server not initialized")
+		return errors.New("grpc server not initialized")
 	}
 }
 

@@ -2,8 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/go-pg/pg"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
 	"time"
 )
@@ -22,17 +22,19 @@ func NewDbConnection(config structure.DBConfiguration) (*pg.DB, error) {
 
 	var n time.Time
 	_, err := pdb.QueryOne(pg.Scan(&n), "SELECT now()")
-	if err == nil {
-		logger.Infof("Database server time: %s", n)
-	}
 
 	return pdb, err
 }
 
 func openSqlConn(config structure.DBConfiguration, schema string) (*sql.DB, error) {
-	return sql.Open("postgres", "postgres://"+
-		config.Address+":"+config.Port+
-		"/"+config.Database+
-		"?search_path="+schema+"&sslmode=disable&user="+
-		config.Username+"&password="+config.Password)
+	cs := fmt.Sprintf(
+		"postgres://%s:%s/%s?search_path=%s,public&sslmode=disable&user=%s&password=%s",
+		config.Address,
+		config.Port,
+		config.Database,
+		schema,
+		config.Username,
+		config.Password,
+	)
+	return sql.Open("postgres", cs)
 }

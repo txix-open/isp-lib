@@ -1,14 +1,14 @@
 package database
 
 import (
+	"errors"
 	"github.com/go-pg/pg"
-	"github.com/integration-system/isp-lib/logger"
 	"reflect"
 )
 
-func RunInTransaction(f interface{}) error {
-	return RunInTransactionV2(dbManagerInstance.Db, f)
-}
+const (
+	ormDbTypeName = "orm.DB"
+)
 
 func RunInTransactionV2(pdb *pg.DB, f interface{}) error {
 	val := reflect.ValueOf(f)
@@ -23,15 +23,11 @@ func RunInTransactionV2(pdb *pg.DB, f interface{}) error {
 		for i := 0; i < inParamCount; i++ {
 			param := t.In(i)
 			if param.Kind() != reflect.Struct {
-				err := "Invalid param type in callback. Expected struct with DB orm.DB field"
-				logger.Error(err)
-				panic(err)
+				panic(errors.New("invalid param type in callback. Expected struct with DB orm.DB field"))
 			}
 			field, present := param.FieldByName("DB")
 			if !present || field.Type.String() != ormDbTypeName {
-				err := "Invalid param type in callback. Expected struct with DB orm.DB field"
-				logger.Error(err)
-				panic(err)
+				panic(errors.New("invalid param type in callback. Expected struct with DB orm.DB field"))
 			}
 			repository := reflect.New(param)
 			repository.Elem().FieldByName("DB").Set(reflect.ValueOf(tx))
@@ -53,8 +49,6 @@ func RunInTransactionV2(pdb *pg.DB, f interface{}) error {
 		})
 		return err
 	} else {
-		err := "Expected a function"
-		logger.Error(err)
-		panic(err)
+		panic(errors.New("expected a function"))
 	}
 }

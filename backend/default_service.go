@@ -2,6 +2,7 @@ package backend
 
 import (
 	"errors"
+	"fmt"
 	proto "github.com/golang/protobuf/ptypes/struct"
 	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
@@ -176,7 +177,10 @@ func (df *DefaultService) getStreamHandler(ctx context.Context) (streaming.Strea
 }
 
 func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
-	funcs, streams := resolveHandlers(methodPrefix, handlersStructs...)
+	funcs, streams, err := resolveHandlers(methodPrefix, handlersStructs...)
+	if err != nil {
+		panic(err)
+	}
 	return &DefaultService{
 		functions:       funcs,
 		streamConsumers: streams,
@@ -186,8 +190,6 @@ func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *Def
 
 func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointConfig {
 	endpoints := make([]structure.EndpointConfig, 0)
-	/*logger.Infof("Outer grpc address is %s, module_name: %s, version: %s, libVersion: %s",
-	addr.GetAddress(), module.ModuleName, module.Version, module.LibVersion)*/
 	for _, handlersStruct := range handlersStructs {
 		of := reflect.ValueOf(handlersStruct)
 		if of.Kind() == reflect.Map {
@@ -251,7 +253,7 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	var fun = function{}
 	inParamsCount := fType.NumIn()
 	if inParamsCount > 2 {
-		return fun, errors.New("Expected 2 or less params: ([md] [data])")
+		return fun, errors.New("expected 2 or less params: ([md] [data])")
 	}
 	fun.dataParamNum = -1
 	fun.mdParamNum = -1
@@ -269,7 +271,7 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	return fun, nil
 }
 
-func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streaming.StreamConsumer) {
+func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streaming.StreamConsumer, error) {
 	functions := make(map[string]function)
 	streamHandlers := make(map[string]streaming.StreamConsumer)
 	for _, handlersStruct := range handlersStructs {
@@ -279,8 +281,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 				fValue := reflect.ValueOf(v)
 				f, err := getFunction(fValue.Type(), fValue)
 				if err != nil {
-					logger.Warn(err)
-					continue
+					return nil, nil, err
 				}
 				functions[k] = f
 			}
@@ -298,12 +299,12 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 					} else {
 						f, err := getFunction(fType, field)
 						if err != nil {
-							logger.Warn(err)
-							continue
+							return nil, nil, err
 						}
 
 						if _, present := functions[key]; present {
-							logger.Warnf("Duplicate method handlers for method: %s", key)
+							return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", key)
+
 						}
 						f.methodName = key
 						functions[key] = f
@@ -312,7 +313,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 			}
 		}
 	}
-	return functions, streamHandlers
+	return functions, streamHandlers, nil
 }
 
 func getMethodName(ctx context.Context) (string, metadata.MD, error) {

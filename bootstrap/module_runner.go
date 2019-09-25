@@ -2,15 +2,16 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/config"
 	"github.com/integration-system/isp-lib/config/schema"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/metric"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
 	"github.com/thecodeteam/goodbye"
 	"os"
@@ -46,7 +47,7 @@ func (b *runner) run() {
 	defer func() {
 		err := recover()
 		if err != nil {
-			logger.Fatal(err)
+			log.Fatalf(stdcodes.ModuleRunFatalError, "could not run module, fatal error occurred: %v", err)
 		}
 	}()
 
@@ -91,7 +92,7 @@ func (b *runner) run() {
 
 			remoteConfigTimeoutChan = neverTriggerChan //stop flooding in logs
 		case <-remoteConfigTimeoutChan:
-			logger.Warn("Remote config isn't received")
+			log.Error(stdcodes.RemoteConfigIsNotReceivedByTimeout, "remote config is not received by timeout")
 			remoteConfigTimeoutChan = time.After(defaultRemoteConfigAwaitTimeout)
 		case routers := <-b.routesChan:
 			if b.onRoutesReceive != nil {
@@ -139,7 +140,7 @@ func (b *runner) initShutdownHandler() context.Context {
 
 	goodbye.Notify(ctx)
 	goodbye.Register(func(ctx context.Context, sig os.Signal) {
-		logger.Info(logger.FmtAlertMsg("module shutting down now"))
+		log.Info(stdcodes.ModuleManualShutdown, "module shutting down now")
 
 		if b.client != nil {
 			b.client.Close()
@@ -149,7 +150,7 @@ func (b *runner) initShutdownHandler() context.Context {
 			b.onShutdown(ctx, sig)
 		}
 
-		logger.Info(logger.FmtAlertMsg("module has gracefully shut down"))
+		log.Info(stdcodes.ModuleManualShutdown, "module has gracefully shut down")
 
 		close(b.exitChan)
 	})
@@ -173,7 +174,7 @@ func (b *runner) initModuleInfo() {
 
 func (b *runner) initSocketConnection() {
 	if b.makeSocketConfig == nil {
-		logger.Fatal("Socket configuration is not specified. Call 'SocketConfiguration' first")
+		panic(errors.New("socket configuration is not specified. Call 'SocketConfiguration' first"))
 		return
 	}
 
@@ -182,18 +183,18 @@ func (b *runner) initSocketConnection() {
 		EnableReconnection().
 		ReconnectionTimeout(defaultConfigServiceConnectionTimeout).
 		OnReconnectionError(func(err error) {
-			logger.Warnf("SocketIO reconnection error: %v", err)
+			log.Errorf(stdcodes.ConfigServiceConnectionError, "could not reconnect to config service: %v", err)
 			b.lastFailedConnectionTime = time.Now()
 		}).
 		On(gosocketio.OnDisconnection, func(arg interface{}) error {
-			logger.Warn("SocketIO disconnected")
+			log.Error(stdcodes.ConfigServiceDisconnection, "disconnected from config service")
 			b.lastFailedConnectionTime = time.Now()
 			b.disconnectChan <- struct{}{}
 			return nil
 		}, nil)
 	connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
 	if err != nil {
-		logger.Fatal(err)
+		panic(err)
 	}
 	c := builder.BuildToConnectMany(connectionStrings)
 
@@ -222,7 +223,7 @@ func (b *runner) initSocketConnection() {
 
 	err = c.Dial()
 	for err != nil {
-		logger.Warnf("Could not connect to SocketIO: %v", err)
+		log.Errorf(stdcodes.ConfigServiceConnectionError, "could not connect to config service: %v", err)
 		b.lastFailedConnectionTime = time.Now()
 
 		select {
@@ -283,11 +284,9 @@ func (b *runner) sendModuleRequirements() {
 	}
 
 	if !requirements.IsEmpty() {
-		logger.Infof("%s: %v", utils.ModuleSendRequirements, requirements)
-		if s, err := json.Marshal(requirements); err != nil {
-			logger.Warn("Could not serialize requirements to JSON", err)
-		} else if err := b.client.Emit(utils.ModuleSendRequirements, string(s)); err != nil {
-			logger.Warn("Could not send requirements", err)
+		if ok, bytes, _ := emitEvent(b.client, utils.ModuleSendRequirements, requirements, 0); ok {
+			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes)}).
+				Info(stdcodes.ConfigServiceSendRequirements, "send module requirements")
 		}
 	}
 }
@@ -295,33 +294,28 @@ func (b *runner) sendModuleRequirements() {
 func (b *runner) sendModuleDeclaration(eventType string) {
 	b.moduleInfo = b.makeModuleInfo(b.localConfigPtr)
 
-	bytes, err := getJsonModuleDeclaration(b.moduleInfo)
-	if err != nil {
-		logger.Warn("Could not serialize declaration to JSON", err)
-		return
-	}
+	declaration := getModuleDeclaration(b.moduleInfo)
 
-	logger.Debugf("MODULE_DECLARATION: %s", string(bytes))
-	logger.Info(eventType)
-	if err := b.client.Emit(eventType, string(bytes)); err != nil {
-		logger.Warn("Could not send declaration", err)
+	if ok, bytes, _ := emitEvent(b.client, eventType, declaration, 0); ok {
+		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes)}).
+			Info(stdcodes.ConfigServiceSendModuleReady, "send module declaration")
 	}
 }
 
 func (b *runner) sendModuleConfigSchema() {
 	s := schema.GenerateConfigSchema(b.remoteConfigPtr)
 	req := schema.ConfigSchema{Version: b.moduleInfo.ModuleVersion, Schema: s}
+
 	if defaultCfg, err := schema.ExtractConfig(b.defaultRemoteConfigPath); err != nil {
-		logger.Error("could not read default config", err)
+		log.WithMetadata(log.Metadata{"path": b.defaultRemoteConfigPath}).
+			Warnf(stdcodes.ModuleDefaultRCReadError, "could not read default remote config: %v", err)
 	} else {
 		req.DefaultConfig = defaultCfg
 	}
-	if bytes, err := json.Marshal(req); err != nil {
-		logger.Error("Could not serialize config schema to JSON", err)
-	} else if res, err := b.client.Ack(utils.ModuleSendConfigSchema, string(bytes), 3*time.Second); err != nil {
-		logger.Error("Could not send config schema", err)
-	} else {
-		logger.Debugf("Update schema response: %s", res)
+
+	if ok, _, resp := emitEvent(b.client, utils.ModuleSendConfigSchema, req, 5*time.Second); ok {
+		log.WithMetadata(log.Metadata{"response": resp}).
+			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
 	}
 }
 

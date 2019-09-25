@@ -74,60 +74,74 @@ func SetLevel(level string) {
 	}
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Info(args ...interface{}) {
 	terminalLogger.Infoln(args...)
 
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Infof(format string, args ...interface{}) {
 	terminalLogger.Infof(format, args...)
 
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Warn(args ...interface{}) {
 	terminalLogger.Warnln(args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Warnf(format string, args ...interface{}) {
 	terminalLogger.Warnf(format, args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Debug(args ...interface{}) {
 	terminalLogger.Debugln(args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Debugf(format string, args ...interface{}) {
 	terminalLogger.Debugf(format, args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Error(args ...interface{}) {
 	terminalLogger.Errorln(args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Errorf(format string, args ...interface{}) {
 	terminalLogger.Errorf(format, args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Fatal(args ...interface{}) {
 	terminalLogger.Fatalln(args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Fatalf(format string, args ...interface{}) {
 	terminalLogger.Fatalf(format, args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Panic(args ...interface{}) {
 	terminalLogger.Panicln(args)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Panicf(format string, args ...interface{}) {
 	terminalLogger.Panicf(format, args)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Log(level logrus.Level, args ...interface{}) {
 	terminalLogger.Log(level, args...)
 }
 
+// Deprecated: use github.com/integration-system/isp-log
 func Logf(level logrus.Level, format string, args ...interface{}) {
 	terminalLogger.Logf(level, format, args...)
 }

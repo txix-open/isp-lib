@@ -1,13 +1,13 @@
 package bootstrap
 
 import (
-	"github.com/integration-system/isp-lib/logger"
+	"errors"
 	"github.com/integration-system/isp-lib/utils"
 	"reflect"
 )
 
 const (
-	LibraryVersion = "1.1.1"
+	LibraryVersion = "1.7.0"
 )
 
 type bootstrapConfiguration struct {
@@ -81,7 +81,7 @@ func (cfg *bootstrapConfiguration) OnConfigErrorReceive(f interface{}) *bootstra
  */
 func (cfg *bootstrapConfiguration) OnRemoteConfigReceive(f interface{}) *bootstrapConfiguration {
 	if cfg.remoteConfigType == "" {
-		logger.Fatal("Remote config type is undefined.")
+		panic(errors.New("remote config type is undefined"))
 		return nil
 	}
 	rv, rt := reflect.ValueOf(f), reflect.TypeOf(f)
@@ -150,11 +150,11 @@ func (cfg *bootstrapConfiguration) Run() {
 // entry point to describe module
 func ServiceBootstrap(localConfigPtr, remoteConfigPtr interface{}) *bootstrapConfiguration {
 	if localConfigPtr == nil || reflect.TypeOf(localConfigPtr).Kind() != reflect.Ptr {
-		logger.Fatal("Expecting not nil pointer to local config struct")
+		panic(errors.New("expecting not nil pointer to local config struct"))
 		return nil
 	}
 	if remoteConfigPtr != nil && reflect.TypeOf(remoteConfigPtr).Kind() != reflect.Ptr {
-		logger.Fatal("Expecting not nil pointer to remote config struct")
+		panic(errors.New("expecting not nil pointer to remote config struct"))
 		return nil
 	}
 	b := &bootstrapConfiguration{

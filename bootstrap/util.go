@@ -5,34 +5,21 @@ import (
 	"fmt"
 	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/backend"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
+	"github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
-
-func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func(*gosocketio.Channel, string) error {
-	return func(_ *gosocketio.Channel, data string) error {
-		logger.Infof("--- Got event: %s message: %s", event, data)
-
-		list := make([]structure.AddressConfiguration, 0)
-		if err := json.Unmarshal([]byte(data), &list); err != nil {
-			logger.Error(err)
-			return err
-		} else {
-			f(list)
-		}
-		return nil
-	}
-}
 
 func assertSingleParamFunc(rt reflect.Type, expectingType string) {
 	if rt.Kind() != reflect.Func ||
 		rt.NumIn() != 1 ||
 		rt.In(0).String() != expectingType {
-		logger.Fatalf("Expecting function with one parameter of '%s' type, received '%s'", expectingType, rt.In(0).String())
+		panic(fmt.Errorf("expecting function with one parameter of '%s' type, received '%s'", expectingType, rt.In(0).String()))
 	}
 }
 
@@ -41,7 +28,7 @@ func assertTwoParamFunc(rt reflect.Type, expectingType string) {
 		rt.NumIn() != 2 ||
 		rt.In(0).String() != expectingType ||
 		rt.In(1).String() != expectingType {
-		logger.Fatalf("Expecting function with two '%s' parameters", expectingType)
+		panic(fmt.Errorf("expecting function with two '%s' parameters", expectingType))
 	}
 }
 
@@ -56,7 +43,7 @@ func callFunc(f *reflect.Value, args ...interface{}) {
 
 func must(err error) {
 	if err != nil {
-		logger.Fatal(err)
+		panic(err)
 	}
 }
 
@@ -76,7 +63,7 @@ func getOutboundIp() (string, error) {
 	return conn.LocalAddr().(*net.UDPAddr).IP.To4().String(), nil
 }
 
-func getJsonModuleDeclaration(moduleInfo ModuleInfo) ([]byte, error) {
+func getModuleDeclaration(moduleInfo ModuleInfo) structure.BackendDeclaration {
 	endpoints := backend.GetEndpoints(moduleInfo.ModuleName, moduleInfo.Handlers...)
 	addr := moduleInfo.GrpcOuterAddress.IP
 	hasSchema := strings.Contains(addr, "http://")
@@ -86,7 +73,7 @@ func getJsonModuleDeclaration(moduleInfo ModuleInfo) ([]byte, error) {
 	if addr == "" {
 		ip, err := getOutboundIp()
 		if err != nil {
-			logger.Warn(err)
+			panic(err)
 		} else {
 			if hasSchema {
 				ip = fmt.Sprintf("http://%s", ip)
@@ -94,15 +81,13 @@ func getJsonModuleDeclaration(moduleInfo ModuleInfo) ([]byte, error) {
 			moduleInfo.GrpcOuterAddress.IP = ip
 		}
 	}
-	declaration := structure.BackendDeclaration{
+	return structure.BackendDeclaration{
 		ModuleName: moduleInfo.ModuleName,
 		Version:    moduleInfo.ModuleVersion,
 		Address:    moduleInfo.GrpcOuterAddress,
 		LibVersion: LibraryVersion,
 		Endpoints:  endpoints,
 	}
-
-	return json.Marshal(declaration)
 }
 
 func getConfigServiceConnectionString(sc structure.SocketConfiguration) string {
@@ -140,4 +125,30 @@ func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]stri
 		connStrings[i] = connectionString
 	}
 	return connStrings, nil
+}
+
+func emitEvent(c *gosocketio.Client, event string, data interface{}, ackTimeout time.Duration) (bool, []byte, string) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		log.WithMetadata(log.Metadata{"event": event}).
+			Errorf(stdcodes.ConfigServiceSendDataError, "marshal payload to json: %v", err)
+		return false, nil, ""
+	}
+
+	var (
+		res string
+	)
+	if ackTimeout > 0 {
+		res, err = c.Ack(event, bytes, ackTimeout)
+	} else {
+		err = c.Emit(event, bytes)
+	}
+
+	if err != nil {
+		log.WithMetadata(log.Metadata{"event": event}).
+			Errorf(stdcodes.ConfigServiceSendDataError, "emit event to config service: %v", err)
+		return false, bytes, ""
+	}
+
+	return true, bytes, res
 }

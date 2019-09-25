@@ -3,15 +3,33 @@ package bootstrap
 import (
 	"encoding/json"
 	"github.com/integration-system/golang-socketio"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"reflect"
 )
 
+func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func(*gosocketio.Channel, string) error {
+	return func(_ *gosocketio.Channel, data string) error {
+		list := make([]structure.AddressConfiguration, 0)
+		if err := json.Unmarshal([]byte(data), &list); err != nil {
+			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid address list: %v", err)
+			return err
+		} else {
+			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+				Info(stdcodes.ConfigServiceReceiveRequiredModuleAddress, "received required module address list")
+			f(list)
+		}
+		return nil
+	}
+}
+
 func handleRemoteConfiguration(remoteConfigChan chan string, event string) func(c *gosocketio.Channel, data string) error {
 	return func(c *gosocketio.Channel, data string) error {
-		logger.Infof("--- Got event: %s message: %s", event, data)
+		log.WithMetadata(log.Metadata{"config": data}).
+			Info(stdcodes.ConfigServiceReceiveConfiguration, "received config")
 		remoteConfigChan <- data
 		return nil
 	}
@@ -19,7 +37,6 @@ func handleRemoteConfiguration(remoteConfigChan chan string, event string) func(
 
 func handleError(onSocketErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args map[string]interface{}) error {
 	return func(c *gosocketio.Channel, args map[string]interface{}) error {
-		logger.Infof("--- Got event: %s message: %s", event, args)
 		callFunc(onSocketErrorReceive, args)
 		return nil
 	}
@@ -27,37 +44,34 @@ func handleError(onSocketErrorReceive *reflect.Value, event string) func(c *goso
 
 func handleConfigError(onConfigErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args string) error {
 	return func(c *gosocketio.Channel, args string) error {
-		logger.Infof("--- Got event: %s message: %s", event, args)
 		callFunc(onConfigErrorReceive, args)
 		return nil
 	}
 }
 
 func handleRoutes(routesChan chan structure.RoutingConfig, event string) func(c *gosocketio.Channel, args string) error {
-	return func(c *gosocketio.Channel, args string) error {
-		logger.Infof("--- Got event: %s", event)
-
+	return func(c *gosocketio.Channel, data string) error {
 		routes := structure.RoutingConfig{}
-		err := json.Unmarshal([]byte(args), &routes)
+		err := json.Unmarshal([]byte(data), &routes)
 		if err != nil {
-			logger.Warnf("Received invalid json payload, %s", err)
+			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid routes list: %v", err)
 			return err
 		}
 
 		if err := utils.Validate(routes); err == nil {
-			logger.Debugf("Routes received: %s", args)
+			totalModules := len(routes)
+			totalEndpoints := 0
 			for _, v := range routes {
-				logger.Infof("Routes received: %d, module: %s, version: %s, address: %s",
-					len(v.Endpoints),
-					v.ModuleName,
-					v.Version,
-					v.Address.GetAddress(),
-				)
+				totalEndpoints += len(v.Endpoints)
 			}
+			log.WithMetadata(log.Metadata{"total_modules": totalModules, "total_endpoints": totalEndpoints}).
+				Info(stdcodes.ConfigServiceReceiveRoutes, "received routes")
 			routesChan <- routes
 			return nil
 		} else {
-			logger.Warn("Received invalid route configuration", err)
+			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid routes list: %v", err)
 			return err
 		}
 	}

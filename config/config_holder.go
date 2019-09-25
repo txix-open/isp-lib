@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"os"
 	"os/signal"
 	"path"
@@ -32,9 +34,9 @@ var (
 
 	startWatching  = sync.Once{}
 	onChangeFunc   interface{}
-	errInvalidFunc = errors.New("Expecting func with two pointers to local config type")
+	errInvalidFunc = errors.New("expecting func with two pointers to local config type")
 
-	reloadSig = syscall.SIGUSR1
+	reloadSig = syscall.SIGHUP
 )
 
 func init() {
@@ -61,9 +63,6 @@ func init() {
 }
 
 func Get() interface{} {
-	if configInstance == nil {
-		logger.Fatal("ConfigManager isn't init, call first the \"InitConfig\" method")
-	}
 	return configInstance
 }
 
@@ -84,10 +83,15 @@ func InitConfig(configuration interface{}) interface{} {
 }
 
 func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface{} {
-	configInstance, _ = readConfig(configuration, true)
-	_ = validateLocalConfig(configInstance, true)
-	if callOnChangeHandler {
-		handleConfigChange(configInstance, nil)
+	if localConfig, err := readLocalConfig(configuration); err != nil {
+		return nil //TODO лог
+	} else if err := validateConfig(localConfig); err != nil {
+		return nil //TODO лог
+	} else {
+		configInstance = localConfig
+		if callOnChangeHandler {
+			handleConfigChange(localConfig, nil)
+		}
 	}
 	return configInstance
 }
@@ -99,11 +103,13 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 	}
 
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
-	if err := json.Unmarshal([]byte(newRemoteConfig), newConfiguration); err == nil {
-		_ = validateRemoteConfig(newConfiguration)
-		remoteConfigInstance = newConfiguration
+	if err := json.Unmarshal([]byte(newRemoteConfig), newConfiguration); err != nil {
+		log.WithMetadata(log.Metadata{"data": remoteConfig}).
+			Fatalf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid remote config: %v", err)
+	} else if err := validateConfig(newConfiguration); err != nil {
+
 	} else {
-		logger.Fatal("Invalid remote config json format", err)
+		remoteConfigInstance = newConfiguration
 	}
 
 	return remoteConfigInstance
@@ -118,7 +124,8 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 func OnConfigChange(f interface{}) {
 	rt := reflect.TypeOf(f)
 	if rt.Kind() != reflect.Func || rt.NumIn() != 2 {
-		logger.Panic(errInvalidFunc)
+		panic(errInvalidFunc)
+		return
 	}
 
 	onChangeFunc = f
@@ -144,25 +151,23 @@ func OnConfigChange(f interface{}) {
 
 func reloadConfig() {
 	old := deepcopy.Copy(configInstance)
-	newConfig, err := readConfig(configInstance, false)
+	newConfig, err := readLocalConfig(configInstance)
 	if err != nil {
-		return
+		return //TODO лог
 	}
-	if err := validateLocalConfig(newConfig, false); err == nil {
-		configInstance = newConfig
-		handleConfigChange(newConfig, old)
+	if err := validateConfig(newConfig); err != nil {
+		configInstance = old //TODO лог
 	} else {
-		configInstance = old
+		configInstance = newConfig
+		handleConfigChange(newConfig, old) //TODO лог
 	}
 }
 
-func readConfig(config interface{}, fatal bool) (interface{}, error) {
+func readLocalConfig(config interface{}) (interface{}, error) {
 	if err := viper.ReadInConfig(); err != nil {
-		logError(fatal, "Error reading config file, %v", err)
-		return nil, err
+		return nil, fmt.Errorf("read local config file: %v", err)
 	} else if err := viper.Unmarshal(config); err != nil {
-		logError(fatal, "Unable to decode into struct, %v", err)
-		return nil, err
+		return nil, fmt.Errorf("unmarshal config: %v", err)
 	}
 	return config, nil
 }
@@ -184,25 +189,21 @@ func handleConfigChange(newConfig, oldConfig interface{}) {
 		args := []reflect.Value{reflect.ValueOf(newConfig), reflect.ValueOf(oldConfig)}
 		rv.Call(args)
 	} else {
-		logger.Panic(errInvalidFunc)
+		panic(errInvalidFunc)
 	}
 }
 
-func validateLocalConfig(config interface{}, fatal bool) error {
-	if _, err := govalidator.ValidateStruct(config); err != nil {
+func validateConfig(cfg interface{}) error {
+	if _, err := govalidator.ValidateStruct(cfg); err != nil {
 		validationErrors := govalidator.ErrorsByField(err)
-		logError(fatal, "Local config int't valid. %v", validationErrors)
-		return err
-	} else {
-		return nil
-	}
-}
-
-func validateRemoteConfig(remoteConfig interface{}) error {
-	if _, err := govalidator.ValidateStruct(remoteConfig); err != nil {
-		validationErrors := govalidator.ErrorsByField(err)
-		logError(true, "Remote config int't valid. %v", validationErrors)
-		return err
+		str := strings.Builder{}
+		for k, v := range validationErrors {
+			str.WriteString(k)
+			str.WriteString(" -> ")
+			str.WriteString(v)
+			str.WriteString(", ")
+		}
+		return errors.New(str.String())
 	} else {
 		return nil
 	}
@@ -237,7 +238,7 @@ func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) 
 
 	for path, val := range overrides {
 		if newValue, err := castString(val); err != nil {
-			logger.Warnf("Could not override remote config variable %s, new value: %v, err: %v", path, val, err)
+			return "", fmt.Errorf("could not override remote config variable %s, new value: %v, err: %v", path, val, err)
 		} else {
 			flattenMap[path] = newValue
 		}

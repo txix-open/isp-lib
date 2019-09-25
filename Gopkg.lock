@@ -201,6 +201,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:60cb38f2c4822f80011bb47ddd897b6d03fa8de10a92321b8cc553a562e61891"
+  name = "github.com/integration-system/isp-log"
+  packages = [
+    ".",
+    "stdcodes",
+  ]
+  pruneopts = "UT"
+  revision = "26f82a9577fb2059839f5ad9cd6b58159651a5ba"
+
+[[projects]]
+  branch = "master"
   digest = "1:48f3a739fabefebf152d0196277ee89136c1fa6d88fc67fa486fc765a05b1caa"
   name = "github.com/integration-system/jsonschema"
   packages = ["."]
@@ -661,7 +672,6 @@
     "github.com/buaazp/fasthttprouter",
     "github.com/fsnotify/fsnotify",
     "github.com/go-pg/pg",
-    "github.com/go-pg/pg/orm",
     "github.com/go-redis/redis",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/struct",
@@ -671,8 +681,9 @@
     "github.com/integration-system/go-cmp/cmp",
     "github.com/integration-system/golang-socketio",
     "github.com/integration-system/gowsdl/soap",
+    "github.com/integration-system/isp-log",
+    "github.com/integration-system/isp-log/stdcodes",
     "github.com/integration-system/jsonschema",
-    "github.com/jinzhu/inflection",
     "github.com/json-iterator/go",
     "github.com/json-iterator/go/extra",
     "github.com/lib/pq",
