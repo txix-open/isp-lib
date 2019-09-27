@@ -139,9 +139,9 @@ func emitEvent(c *gosocketio.Client, event string, data interface{}, ackTimeout 
 		res string
 	)
 	if ackTimeout > 0 {
-		res, err = c.Ack(event, bytes, ackTimeout)
+		res, err = c.Ack(event, string(bytes), ackTimeout)
 	} else {
-		err = c.Emit(event, bytes)
+		err = c.Emit(event, string(bytes))
 	}
 
 	if err != nil {
