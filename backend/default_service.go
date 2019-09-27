@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	proto "github.com/golang/protobuf/ptypes/struct"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/streaming"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -37,7 +38,7 @@ var (
 
 type DefaultService struct {
 	functions       map[string]function
-	streamConsumers map[string]streaming.StreamConsumer
+	streamConsumers map[string]streamFunction
 	errHandler      ErrorHandler
 	interceptor     Interceptor
 	pps             []PostProcessor
@@ -49,7 +50,8 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	defer func() {
 		err := recover()
 		if err != nil {
-			logger.Errorf("panic: %v", err)
+			log.WithMetadata(log.Metadata{"method": c.method}).
+				Error(stdcodes.ModuleInternalGrpcServiceError, err)
 		}
 
 		for _, p := range df.pps {
@@ -89,11 +91,7 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	c.mappedResponse = result
 
 	if err != nil {
-		grpcError, mustLog := ResolveError(err)
-		if mustLog {
-			logger.Errorf("Method:%s Error:%v", handler.methodName, err)
-		}
-		err = grpcError.Err()
+		err = handleError(err, c.method)
 	} else {
 		msg = emptyBody
 		if result != nil {
@@ -111,17 +109,13 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 
 func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamServer) error {
 	ctx := stream.Context()
-	consumer, md, err := df.getStreamHandler(ctx)
+	function, md, err := df.getStreamHandler(ctx)
 	if err != nil {
 		return err
 	}
-	err = consumer(stream, md)
+	err = function.consume(stream, md)
 	if err != nil {
-		status, mustLog := ResolveError(err)
-		if mustLog {
-			logger.Error(status.Err())
-		}
-		return status.Err()
+		return handleError(err, function.methodName)
 	}
 	return nil
 }
@@ -164,7 +158,7 @@ func (df *DefaultService) getHandler(ctx context.Context) (*function, metadata.M
 	return &handler, md, nil
 }
 
-func (df *DefaultService) getStreamHandler(ctx context.Context) (streaming.StreamConsumer, metadata.MD, error) {
+func (df *DefaultService) getStreamHandler(ctx context.Context) (*streamFunction, metadata.MD, error) {
 	method, md, err := getMethodName(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -173,7 +167,7 @@ func (df *DefaultService) getStreamHandler(ctx context.Context) (streaming.Strea
 	if !present {
 		return nil, nil, status.Errorf(codes.Unimplemented, "Method [%s] is not implemented", method)
 	}
-	return handler, md, nil
+	return &handler, md, nil
 }
 
 func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
@@ -227,6 +221,18 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 	return structure.EndpointConfig{Path: path.Join(methodPrefix, group, name), Inner: inner}
 }
 
+func handleError(err error, method string) error {
+	grpcError, mustLog := ResolveError(err)
+	if mustLog {
+		log.WithMetadata(log.Metadata{"method": method}).
+			Error(stdcodes.ModuleInternalGrpcServiceError, err)
+	} else if utils.DEV {
+		log.WithMetadata(log.Metadata{"method": method}).
+			Debug(stdcodes.ModuleInternalGrpcServiceError, err)
+	}
+	return grpcError.Err()
+}
+
 func readBody(msg *isp.Message, ptr interface{}) error {
 	bytes := msg.GetBytesBody()
 	if bytes != nil {
@@ -271,9 +277,9 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	return fun, nil
 }
 
-func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streaming.StreamConsumer, error) {
+func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streamFunction, error) {
 	functions := make(map[string]function)
-	streamHandlers := make(map[string]streaming.StreamConsumer)
+	streamHandlers := make(map[string]streamFunction)
 	for _, handlersStruct := range handlersStructs {
 		of := reflect.ValueOf(handlersStruct)
 		if of.Kind() == reflect.Map {
@@ -295,7 +301,10 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 					config := GetEndpointConfig(methodPrefix, t.Field(i))
 					key := config.Path
 					if f, ok := field.Interface().(streaming.StreamConsumer); ok {
-						streamHandlers[key] = f
+						streamHandlers[key] = streamFunction{
+							methodName: key,
+							consume:    f,
+						}
 					} else {
 						f, err := getFunction(fType, field)
 						if err != nil {

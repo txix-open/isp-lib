@@ -17,7 +17,6 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/fsnotify/fsnotify"
 	"github.com/integration-system/bellows"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/utils"
 	"github.com/mohae/deepcopy"
 	"github.com/spf13/viper"
@@ -84,9 +83,11 @@ func InitConfig(configuration interface{}) interface{} {
 
 func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface{} {
 	if localConfig, err := readLocalConfig(configuration); err != nil {
-		return nil //TODO лог
+		log.Fatalf(stdcodes.ModuleReadLocalConfigError, "could not read local config: %v", err)
+		return nil
 	} else if err := validateConfig(localConfig); err != nil {
-		return nil //TODO лог
+		log.Fatalf(stdcodes.ModuleInvalidLocalConfig, "invalid local config: %v", err)
+		return nil
 	} else {
 		configInstance = localConfig
 		if callOnChangeHandler {
@@ -99,7 +100,9 @@ func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface
 func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{} {
 	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
 	if err != nil {
-		logger.Fatal("Could not override remote configuration", err)
+		log.WithMetadata(log.Metadata{"config": remoteConfig}).
+			Fatalf(stdcodes.ModuleOverrideRemoteConfigError, "could not override remote config via env: %v", err)
+		return nil
 	}
 
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
@@ -107,7 +110,8 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 		log.WithMetadata(log.Metadata{"data": remoteConfig}).
 			Fatalf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid remote config: %v", err)
 	} else if err := validateConfig(newConfiguration); err != nil {
-
+		log.WithMetadata(log.Metadata{"config": remoteConfig}).
+			Fatalf(stdcodes.ModuleInvalidRemoteConfig, "received invalid remote config: %v", err)
 	} else {
 		remoteConfigInstance = newConfiguration
 	}
@@ -117,7 +121,7 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 
 // Example:
 // config.OnConfigChange(func(new, old *conf.Configuration) {
-//		logger.Info(new, old)
+//
 // })
 // Callback call after initial loading and after every config files changing.
 // On first call new and old configurations are equals
@@ -153,13 +157,15 @@ func reloadConfig() {
 	old := deepcopy.Copy(configInstance)
 	newConfig, err := readLocalConfig(configInstance)
 	if err != nil {
-		return //TODO лог
+		log.Errorf(stdcodes.ModuleReadLocalConfigError, "could not read local config: %v", err)
+		return
 	}
 	if err := validateConfig(newConfig); err != nil {
-		configInstance = old //TODO лог
+		log.Errorf(stdcodes.ModuleInvalidLocalConfig, "invalid local config: %v", err)
+		configInstance = old
 	} else {
 		configInstance = newConfig
-		handleConfigChange(newConfig, old) //TODO лог
+		handleConfigChange(newConfig, old)
 	}
 }
 
@@ -206,14 +212,6 @@ func validateConfig(cfg interface{}) error {
 		return errors.New(str.String())
 	} else {
 		return nil
-	}
-}
-
-func logError(fatal bool, fmt string, args ...interface{}) {
-	if fatal {
-		logger.Fatalf(fmt, args...)
-	} else {
-		logger.Errorf(fmt, args...)
 	}
 }
 

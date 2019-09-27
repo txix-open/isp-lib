@@ -4,7 +4,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/integration-system/gowsdl/soap"
-	"github.com/integration-system/isp-lib/logger"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/json-iterator/go"
 	"github.com/valyala/fasthttp"
 	"io/ioutil"
@@ -180,7 +181,7 @@ func (ss *HttpService) handleRestRequest(fd *funcDesc, ctx *Ctx) {
 	var err error
 	var result interface{}
 	for _, mw := range ss.mws {
-		if ctx, err = mw(ctx); err != nil {
+		if err = mw(ctx); err != nil {
 			break
 		}
 	}
@@ -202,7 +203,7 @@ func (ss *HttpService) handleRestRequest(fd *funcDesc, ctx *Ctx) {
 				Status: http.StatusText(http.StatusInternalServerError),
 			}
 			ctx.SetStatusCode(http.StatusInternalServerError)
-			logger.Warn(err)
+			log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 		}
 	} else {
 		ctx.SetStatusCode(http.StatusOK)
@@ -218,7 +219,7 @@ func (ss *HttpService) handleSoapRequest(fd *funcDesc, ctx *Ctx) {
 	var result interface{}
 	respBody := soap.SOAPEnvelope{}
 	for _, mw := range ss.mws {
-		if ctx, err = mw(ctx); err != nil {
+		if err = mw(ctx); err != nil {
 			break
 		}
 	}
@@ -237,7 +238,7 @@ func (ss *HttpService) handleSoapRequest(fd *funcDesc, ctx *Ctx) {
 		} else {
 			respBody.Body = soap.SOAPBody{Fault: &soap.SOAPFault{Code: "500", String: "Internal service error"}}
 			ctx.SetStatusCode(http.StatusInternalServerError)
-			logger.Warn(err)
+			log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 		}
 	} else if result != nil {
 		respBody.Body = soap.SOAPBody{Content: result}
@@ -286,7 +287,7 @@ func handleSoapRequest(fd *funcDesc, ctx *Ctx, interceptor Interceptor, validato
 
 	err := xml.Unmarshal(ctx.PostBody(), reqBody)
 	if err != nil {
-		logger.Warn(err)
+		log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 		return nil, &soap.SOAPFault{Code: "400", String: "Invalid xml request body"}
 	}
 	ctx.mappedRequestBody = reflect.ValueOf(reqBody.Body.Content).Elem().Interface()
@@ -311,7 +312,7 @@ func handleRestRequest(fd *funcDesc, ctx *Ctx, interceptor Interceptor, validato
 		val := reflect.New(fd.inType)
 		err := json.Unmarshal(ctx.PostBody(), val.Interface())
 		if err != nil {
-			logger.Warn(err)
+			log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 			return nil, &RESTFault{Code: http.StatusBadRequest, Status: "Invalid json request body"}
 		}
 		ctx.mappedRequestBody = val.Elem().Interface()
@@ -381,7 +382,7 @@ func writeXmlBody(ctx *Ctx, env soap.SOAPEnvelope) {
 
 	bytes, err := xml.Marshal(env)
 	if err != nil {
-		logger.Warn(err)
+		log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 		ctx.SetStatusCode(http.StatusInternalServerError)
 	}
 	ctx.SetContentType(xmlContentType)
@@ -393,7 +394,7 @@ func writeJsonBody(ctx *Ctx, result interface{}) {
 
 	bytes, err := json.Marshal(result)
 	if err != nil {
-		logger.Warn(err)
+		log.Error(stdcodes.ModuleInternalHttpServiceError, err)
 		ctx.SetStatusCode(http.StatusInternalServerError)
 	}
 	ctx.SetContentType(jsonContentType)

@@ -2,9 +2,10 @@ package backend
 
 import (
 	"errors"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/structure"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -27,7 +28,8 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 	defer lock.Unlock()
 
 	if server != nil {
-		logger.Fatal("Grpc server has already started at", grpcAddress.GetAddress())
+		log.Fatalf(stdcodes.ModuleGrpcServiceStartError, "grpc service has already started on %v", grpcAddress.GetAddress())
+		return
 	}
 
 	grpcAddress = &addr
@@ -35,8 +37,8 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 	var ln net.Listener
 	var err error
 	for ln, err = net.Listen("tcp", grpcAddress.GetAddress()); err != nil; {
+		log.Errorf(stdcodes.ModuleGrpcServiceStartError, "open grpc port: %v, err: %v, retry after 3 second...", grpcAddress, err)
 		time.Sleep(time.Second * 3)
-		logger.Warnf("Error grpc connection: %v, try again, err: %v", grpcAddress, err)
 	}
 
 	StartBackendGrpcServerOn(addr, ln, service, opt...)
@@ -50,11 +52,11 @@ func StartBackendGrpcServerOn(addr structure.AddressConfiguration, ln net.Listen
 	server = &GrpcServer{grpcServer, service}
 
 	go func() {
-		logger.Infof("Start backend grpc server on %s", grpcAddress.GetAddress())
+		log.Infof(stdcodes.ModuleGrpcServiceStart, "start grpc service on %v", grpcAddress.GetAddress())
 		if err := server.Serve(ln); err != nil {
-			logger.Warnf("Grpc backend server shutdown with error: %v", err)
+			log.Fatal(stdcodes.ModuleGrpcServiceStartError, err)
 		} else {
-			logger.Info("Grpc backend server shutdown")
+			log.Infof(stdcodes.ModuleGrpcServiceManualShutdown, "shutdown grpc service on %v", grpcAddress.GetAddress())
 		}
 	}()
 }
@@ -65,20 +67,6 @@ func StopGrpcServer() {
 
 	if server != nil {
 		server.GracefulStop()
-		/*for !checkPortIsFree(grpcAddress.Port) {
-			stopCounter++
-			time.Sleep(time.Second * time.Duration(stopCounter))
-			logger.Warnf("Wait for free port for new grpc connection, address: %v", grpcAddress)
-			if stopCounter > 4 {
-				logger.Warnf("Hard stop grpc server, address: %v", grpcAddress)
-				server.Stop()
-			}
-		}
-		time.Sleep(time.Second * 3)
-		if !checkPortIsFree(grpcAddress.Port) {
-			logger.Error("Hard stop grpc server, address: %v", grpcAddress)
-			panic(errors.New("Grpc server error"))
-		}*/
 		server = nil
 		grpcAddress = nil
 	}

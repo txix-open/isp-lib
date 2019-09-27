@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrNoAliveConnections = errors.New("No alive connections")
+	ErrNoAliveConnections = errors.New("no alive connections")
 )
 
 type errorHandler func(err error)
@@ -34,15 +34,17 @@ type InternalGrpcClient struct {
 	metricIntercept func(method string, dur time.Duration, err error)
 }
 
-func (client *InternalGrpcClient) doInvoke(method string, callerId int, requestBody interface{}, responseHandler func(*isp.Message, time.Time) error, mdPairs ...string) error {
-	md := metadata.Pairs(
-		utils.ProxyMethodNameHeader, method,
-		utils.ApplicationIdHeader, strconv.Itoa(callerId),
-	)
-	if len(mdPairs) > 0 {
-		md = metadata.Join(md, metadata.Pairs(mdPairs...))
+func (client *InternalGrpcClient) doInvoke(method string, callerId int, requestBody interface{}, responseHandler func(*isp.Message, time.Time) error, opts ...InvokeOption) error {
+	options := defaultInvokeOpts()
+	for _, opt := range opts {
+		opt(options)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+
+	md := options.md
+	md.Set(utils.ProxyMethodNameHeader, method)
+	md.Set(utils.ApplicationIdHeader, strconv.Itoa(callerId))
+
+	ctx, cancel := context.WithTimeout(context.Background(), options.timeout)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 
@@ -61,7 +63,7 @@ func (client *InternalGrpcClient) doInvoke(method string, callerId int, requestB
 
 }
 
-func (client *InternalGrpcClient) InvokeWithDynamicStruct(method string, callerId int, requestBody interface{}, mdPairs ...string) (interface{}, error) {
+func (client *InternalGrpcClient) InvokeWithDynamicStruct(method string, callerId int, requestBody interface{}, opts ...InvokeOption) (interface{}, error) {
 	var (
 		resp interface{}
 		t    time.Time
@@ -86,21 +88,21 @@ func (client *InternalGrpcClient) InvokeWithDynamicStruct(method string, callerI
 			}
 		}
 		return nil
-	}, mdPairs...); err != nil {
+	}, opts...); err != nil {
 		return nil, err
 	} else {
 		return resp, client.throwMetric(method, t, nil)
 	}
 }
 
-func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, mdPairs ...string) error {
+func (client *InternalGrpcClient) Invoke(method string, callerId int, requestBody, responsePointer interface{}, opts ...InvokeOption) error {
 	return client.doInvoke(method, callerId, requestBody, func(res *isp.Message, start time.Time) error {
 		if responsePointer != nil {
 			err := readBody(res, responsePointer)
 			return client.throwMetric(method, start, err)
 		}
 		return client.throwMetric(method, start, nil)
-	}, mdPairs...)
+	}, opts...)
 }
 
 func (client *InternalGrpcClient) InvokeStream(method string, callerId int, consumer streaming.StreamConsumer) error {

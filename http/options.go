@@ -8,7 +8,7 @@ type ErrorHandler func(ctx *Ctx, err error) interface{}
 
 type UnimplMethodErrorHandler func(ctx *Ctx, actionKey string) interface{}
 
-type Middleware func(ctx *Ctx) (*Ctx, error)
+type Middleware func(ctx *Ctx) error
 
 type Interceptor func(ctx *Ctx, proceed func() (interface{}, error)) (interface{}, error)
 

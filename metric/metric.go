@@ -3,12 +3,11 @@ package metric
 import (
 	"encoding/json"
 	"github.com/buaazp/fasthttprouter"
-	"github.com/rcrowley/go-metrics"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/valyala/fasthttp"
-	"github.com/integration-system/isp-lib/logger"
 	"github.com/integration-system/isp-lib/structure"
-	"log"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
+	"github.com/rcrowley/go-metrics"
+	"github.com/valyala/fasthttp"
 	"sync"
 	"time"
 )
@@ -42,7 +41,8 @@ func GetRegistry() metrics.Registry {
 func InitHttpServer(metricConfig structure.MetricConfiguration) {
 	metricPort := metricConfig.Address.Port
 	if metricPort == "" {
-		logger.Warn("Port for collecting metrics must be specified")
+		log.Errorf(stdcodes.ModuleMetricServiceError, "port for metric service must be specified")
+		return
 	}
 	metricPath := metricConfig.Address.Path
 	if metricPath == "" {
@@ -60,16 +60,10 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 
 	lock.Lock()
 	if metricServer != nil {
-		err := metricServer.Shutdown()
-		if err != nil {
-			logger.Warnf("Error when metric server was stopping: %v", err)
-		} else {
-			metricServer = nil
-		}
+		_ = metricServer.Shutdown()
+		metricServer = nil
 	}
 	lock.Unlock()
-
-	cpu.Info()
 
 	go func() {
 		lock.Lock()
@@ -85,7 +79,7 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 
 		err := metricServer.ListenAndServe(metricIp + ":" + metricPort)
 		if err != nil {
-			log.Fatalf("Metric server error: %v", err)
+			log.Errorf(stdcodes.ModuleMetricServiceError, "could not start metric service: %v", err)
 		}
 	}()
 }

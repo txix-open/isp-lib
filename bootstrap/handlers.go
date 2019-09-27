@@ -29,7 +29,7 @@ func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfigu
 func handleRemoteConfiguration(remoteConfigChan chan string, event string) func(c *gosocketio.Channel, data string) error {
 	return func(c *gosocketio.Channel, data string) error {
 		log.WithMetadata(log.Metadata{"config": data}).
-			Info(stdcodes.ConfigServiceReceiveConfiguration, "received config")
+			Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
 		remoteConfigChan <- data
 		return nil
 	}

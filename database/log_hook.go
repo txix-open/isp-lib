@@ -2,8 +2,12 @@ package database
 
 import (
 	"github.com/go-pg/pg"
-	"github.com/integration-system/isp-lib/logger"
+	log "github.com/integration-system/isp-log"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	debugQueryCode = -1
 )
 
 type logQueryHook struct {
@@ -15,9 +19,9 @@ func (hook logQueryHook) BeforeQuery(q *pg.QueryEvent) {
 
 func (hook logQueryHook) AfterQuery(q *pg.QueryEvent) {
 	if query, err := q.FormattedQuery(); err != nil {
-		logger.Warn("could not format pg query", err)
+		log.Log(hook.level, debugQueryCode, err)
 	} else {
-		logger.Log(hook.level, query)
+		log.Log(hook.level, debugQueryCode, query)
 	}
 }
 

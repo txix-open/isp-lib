@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:e92f5581902c345eb4ceffdcd4a854fb8f73cf436d47d837d1ec98ef1fe0a214"
-  name = "github.com/StackExchange/wmi"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
-  version = "1.0.0"
-
-[[projects]]
   digest = "1:320e7ead93de9fd2b0e59b50fd92a4d50c1f8ab455d96bc2eb083267453a9709"
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
@@ -40,17 +32,6 @@
   pruneopts = "UT"
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
-
-[[projects]]
-  digest = "1:440028f55cb322d8cb5b9d5ebec298a00b7d74690a658fe6b1c0c0b44341bfae"
-  name = "github.com/go-ole/go-ole"
-  packages = [
-    ".",
-    "oleutil",
-  ]
-  pruneopts = "UT"
-  revision = "97b6244175ae18ea6eef668034fd6565847501c9"
-  version = "v1.2.4"
 
 [[projects]]
   digest = "1:2391a16d6bb332e406ba71d6102d520442e5b62514de3808078fb71f6e355c6d"
@@ -201,14 +182,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:60cb38f2c4822f80011bb47ddd897b6d03fa8de10a92321b8cc553a562e61891"
+  digest = "1:97346401123de7b6b5e7af2f73498a14ad3a508eee3307bc986ca16695b99370"
   name = "github.com/integration-system/isp-log"
   packages = [
     ".",
     "stdcodes",
   ]
   pruneopts = "UT"
-  revision = "26f82a9577fb2059839f5ad9cd6b58159651a5ba"
+  revision = "f17e300b67cfbc70ccd9e409f604b8a9389b9b49"
 
 [[projects]]
   branch = "master"
@@ -419,17 +400,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "9beb055b7962d16947a14e1cd718098a2431e20e"
-
-[[projects]]
-  digest = "1:f5139e9f4441369ffb5d44fa9fae62b921457d4dc09cd873ed0fd44511cc87ee"
-  name = "github.com/shirou/gopsutil"
-  packages = [
-    "cpu",
-    "internal/common",
-  ]
-  pruneopts = "UT"
-  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
-  version = "v2.19.7"
 
 [[projects]]
   digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
@@ -694,7 +664,6 @@
     "github.com/pkg/errors",
     "github.com/pressly/goose",
     "github.com/rcrowley/go-metrics",
-    "github.com/shirou/gopsutil/cpu",
     "github.com/sirupsen/logrus",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",

@@ -2,6 +2,7 @@ package backend
 
 import (
 	isp "github.com/integration-system/isp-lib/proto/stubs"
+	"github.com/integration-system/isp-lib/streaming"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -69,4 +70,9 @@ func (f function) call(dataParam interface{}, md metadata.MD) (interface{}, erro
 	}
 
 	return result, err
+}
+
+type streamFunction struct {
+	methodName string
+	consume    streaming.StreamConsumer
 }

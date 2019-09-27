@@ -1,3 +1,4 @@
+// Deprecated: use github.com/integration-system/isp-log instead
 package logger
 
 import (

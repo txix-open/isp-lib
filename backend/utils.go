@@ -2,7 +2,6 @@ package backend
 
 import (
 	proto "github.com/golang/protobuf/ptypes/struct"
-	"github.com/integration-system/isp-lib/logger"
 	isp "github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/utils"
 	"google.golang.org/grpc/codes"
@@ -41,7 +40,6 @@ func WrapBody(value *proto.Value) *isp.Message {
 	case *proto.Value_NullValue:
 		result = emptyBody
 	default:
-		logger.Warn("Incorrect result type, expected struct or array or nil. Will return empty response body")
 		result = emptyBody
 	}
 	return result
