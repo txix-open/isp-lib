@@ -108,7 +108,7 @@ func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
 	if err := json.Unmarshal([]byte(newRemoteConfig), newConfiguration); err != nil {
 		log.WithMetadata(log.Metadata{"data": remoteConfig}).
-			Fatalf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid remote config: %v", err)
+			Fatalf(stdcodes.ModuleInvalidRemoteConfig, "received invalid remote config: %v", err)
 	} else if err := validateConfig(newConfiguration); err != nil {
 		log.WithMetadata(log.Metadata{"config": remoteConfig}).
 			Fatalf(stdcodes.ModuleInvalidRemoteConfig, "received invalid remote config: %v", err)
