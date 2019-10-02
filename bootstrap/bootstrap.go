@@ -3,12 +3,20 @@ package bootstrap
 import (
 	"errors"
 	"github.com/integration-system/isp-lib/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/sirupsen/logrus"
 	"reflect"
 )
 
 const (
-	LibraryVersion = "1.7.0"
+	LibraryVersion = "2.0.0"
 )
+
+func init() {
+	if utils.DEV {
+		must(log.SetLevel(logrus.DebugLevel.String()))
+	}
+}
 
 type bootstrapConfiguration struct {
 	localConfigPtr   interface{}
@@ -25,6 +33,7 @@ type bootstrapConfiguration struct {
 	onRoutesReceive       routesConsumer
 	onLocalConfigChange   interface{}
 	onShutdown            shutdownHandler
+	onModuleReady         func()
 
 	requiredModules  map[string]*connectConsumer
 	connectedModules map[string][]string
@@ -139,6 +148,12 @@ func (cfg *bootstrapConfiguration) RequireModule(moduleName string, consumer add
 // add path to remote config module
 func (cfg *bootstrapConfiguration) DefaultRemoteConfigPath(path string) *bootstrapConfiguration {
 	cfg.defaultRemoteConfigPath = path
+	return cfg
+}
+
+// callback fires every time before MODULE:READY send to config service
+func (cfg *bootstrapConfiguration) OnModuleReady(f func()) *bootstrapConfiguration {
+	cfg.onModuleReady = f
 	return cfg
 }
 

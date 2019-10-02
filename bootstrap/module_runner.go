@@ -124,6 +124,9 @@ func (b *runner) run() {
 			}
 		case <-initChan:
 			b.ready = true
+			if b.onModuleReady != nil {
+				b.onModuleReady()
+			}
 			b.sendModuleReady()
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.ready = false
