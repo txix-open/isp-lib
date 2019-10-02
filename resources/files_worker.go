@@ -139,7 +139,7 @@ func makeReaders(path string, csvSep rune) (*os.File, *gzip.Reader, *csv.Reader,
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		_ = file.Close()
-		return nil, nil, nil, err
+		return nil, nil, nil, errors.WithMessage(err, "open gzip reader")
 	}
 
 	csvReader := csv.NewReader(gzipReader)
