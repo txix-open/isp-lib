@@ -3,10 +3,7 @@ package resources
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/integration-system/isp-lib/logger"
 	"io"
-	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -14,31 +11,11 @@ import (
 const (
 	entityNameSeparator = "__"
 	translatesComa      = ','
-	logStart            = "=============== BEGIN INITIALIZING ==============="
-	logEnd              = "=============== END INITIALIZING ==============="
 )
 
 var (
-	errInvalidFileNameFormat = "Invalid file name. Expecting: '%sName__systemApplicationId'. Found: '%s'"
+	errInvalidFileNameFormat = "invalid file name. Expecting: '%sName__systemApplicationId'. Found: '%s'"
 )
-
-func WalkInResourcesFiles(dir string, walker func(file os.FileInfo) error) error {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	fmt.Println()
-	logger.Info(logStart)
-	for _, f := range files {
-		if err := walker(f); err != nil {
-			return err
-		}
-	}
-	logger.Info(logEnd)
-	fmt.Println()
-	
-	return nil
-}
 
 func ReadAllLines(
 	csvReader *csv.Reader,
@@ -64,7 +41,7 @@ func ReadAllLines(
 		translates[i] = record
 		i++
 		total++
-		if total % batchSize == 0 {
+		if total%batchSize == 0 {
 			if err := onBatch(translates, i, total); err != nil {
 				if onError != nil && !onError(err) {
 					return err
