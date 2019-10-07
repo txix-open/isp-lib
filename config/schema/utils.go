@@ -16,22 +16,22 @@ const (
 	tagCustomSchema = "schemaGen"
 )
 
-func GetNameAndRequiredFlag(field reflect.StructField) (string, bool) {
+func GetNameAndRequiredFlag(field reflect.StructField) (string, bool, bool) {
 	if field.PkgPath != "" { // unexported field, ignore it
-		return "", false
+		return "", false, false
 	}
 
 	name, accept := utils.GetFieldName(field)
 	if !accept {
-		return "", false
+		return "", false, false
 	}
 
 	if validators := getValidatorsMap(field); validators != nil {
 		_, present := validators["required"]
-		return name, present
+		return name, true, present
 	}
 
-	return name, false
+	return name, true, false
 }
 
 func SetProperties(field reflect.StructField, t *jsonschema.Type) {
