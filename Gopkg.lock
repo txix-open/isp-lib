@@ -52,7 +52,7 @@
   version = "v8.0.6"
 
 [[projects]]
-  digest = "1:61a8ca58fee5891ccd5e9e0503d3cb0636fe15505a7b758d51fe38d38bfce32f"
+  digest = "1:b46f50677ef33284ebde2b285a42b707ff9e1de1f37328d91869859c929ebbd2"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -64,11 +64,11 @@
     "internal/util",
   ]
   pruneopts = "UT"
-  revision = "17c058513b3e03c5e23136c18582fdd8ac8a3645"
-  version = "v6.15.5"
+  revision = "7f69d5e32072d151eb6936cbe2306413e8117488"
+  version = "v6.15.6"
 
 [[projects]]
-  digest = "1:877b9eedd8a92d456a213fe85fb8c6d178cb2bc499e86ec5b7f0bcc05d121e54"
+  digest = "1:e20a9d6598878d629e04541d96076bf232c1ee36f6b267c4a5dae7779f15c36a"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -76,8 +76,8 @@
     "protoc-gen-gogo/descriptor",
   ]
   pruneopts = "UT"
-  revision = "0ca988a254f991240804bf9821f3450d87ccbb1b"
-  version = "v1.3.0"
+  revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
+  version = "v1.3.1"
 
 [[projects]]
   digest = "1:e3839df32927e8d3403cd5aa7253d966e8ff80fc8f10e2e35d146461cd83fcfa"
@@ -159,8 +159,7 @@
   revision = "ac5582987a2f25e8743e0ebb7259312adda05c23"
 
 [[projects]]
-  branch = "master"
-  digest = "1:280d620c33aea271545c0b4456e1a9347a45b03aca09d2bb8923cc524864a325"
+  digest = "1:12bcebed6dfc45cedc650f6dce60fe6ce6d27de88d9bfa8893a5b144c010d317"
   name = "github.com/integration-system/golang-socketio"
   packages = [
     ".",
@@ -168,7 +167,8 @@
     "transport",
   ]
   pruneopts = "UT"
-  revision = "24b88aed7c77403c0b9b45de1f42ddc3c4fc0fb2"
+  revision = "7513a9b590e428674e3c22ea82f46b28890cc17a"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -180,22 +180,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:97346401123de7b6b5e7af2f73498a14ad3a508eee3307bc986ca16695b99370"
+  digest = "1:1789fb6e57949a6e4cacb74023cd30efb04b09dc6111d6ef3718241ebb23ebe9"
   name = "github.com/integration-system/isp-log"
   packages = [
     ".",
     "stdcodes",
   ]
   pruneopts = "UT"
-  revision = "f17e300b67cfbc70ccd9e409f604b8a9389b9b49"
+  revision = "a22bf2e0b56a9ef47db4a98756e39f700a99b688"
 
 [[projects]]
   branch = "master"
-  digest = "1:9eb3b0c24935048c4097eedb3344f2f209e35bd12fa3884e54b83a1a55c22224"
+  digest = "1:48f3a739fabefebf152d0196277ee89136c1fa6d88fc67fa486fc765a05b1caa"
   name = "github.com/integration-system/jsonschema"
   packages = ["."]
   pruneopts = "UT"
-  revision = "26ce276eb6ea02881e72f7756f48796bc1f9552b"
+  revision = "5475a8b08e62e41fa886641861ac225e7f91e4e5"
 
 [[projects]]
   digest = "1:01ed62f8f4f574d8aff1d88caee113700a2b44c42351943fa73cc1808f736a50"
@@ -206,15 +206,15 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:ac7f1061abc812a5d0de6df7e3f477cef942aef503848f436da0f0eb2603bfbf"
+  digest = "1:d78015a9da26d37166a2119592019e8bfe9b24bec60aff4a46db6110070fb1b2"
   name = "github.com/json-iterator/go"
   packages = [
     ".",
     "extra",
   ]
   pruneopts = "UT"
-  revision = "27518f6661eba504be5a7a9a9f6d9460d892ade3"
-  version = "v1.1.7"
+  revision = "03217c3e97663914aec3faafde50d081f197a0a2"
+  version = "1.1.8"
 
 [[projects]]
   digest = "1:caa1da085cc12cd39d3ddb267434902f621050e1b46f7e9477b2b933df680193"
@@ -225,8 +225,8 @@
     "zlib",
   ]
   pruneopts = "UT"
-  revision = "29f61c4f7dec01b2cc59c562f290fe1cc441eaef"
-  version = "v1.8.5"
+  revision = "da9470192e5d0ad619defde5ded583e5e907d3e8"
+  version = "v1.8.6"
 
 [[projects]]
   digest = "1:923c4d7194b42e054b2eb8a6c62824ac55e23ececc1c7e48d4da69c971c55954"
@@ -273,12 +273,12 @@
   version = "v0.1.4"
 
 [[projects]]
-  digest = "1:36325ebb862e0382f2f14feef409ba9351271b89ada286ae56836c603d43b59c"
+  digest = "1:d62282425ffb75047679d7e2c3b980eea7f82c05ef5fb9142ee617ebac6e7432"
   name = "github.com/mattn/go-isatty"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e1f7b56ace729e4a73a29a6b4fac6cd5fcda7ab3"
-  version = "v0.0.9"
+  revision = "88ba11cfdc67c7588b30042edf244b2875f892b6"
+  version = "v0.0.10"
 
 [[projects]]
   branch = "master"
@@ -505,11 +505,11 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "34f69633bfdcf9db92f698f8487115767eebef81"
+  revision = "87dc89f01550277dc22b74ffcf4cd89fa2f40f4c"
 
 [[projects]]
   branch = "master"
-  digest = "1:f1c76c734a99734a3c81aa260c1113d466d7057ad79263dedd82ade76d3da289"
+  digest = "1:c124e945335a9c62ede3a565f3198c5ae9a5ecc39fddd85871138362d128fb74"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -521,18 +521,18 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "d98b1b4438230571bd7fbc5aaa89843e92937bd3"
+  revision = "ec77196f6094c3492a8b61f2c11cf937f78992ae"
 
 [[projects]]
   branch = "master"
-  digest = "1:c6a5cd39ef1a3642a5bf203c3d9322fd738a02a4da206264c2d3a4110bdb36ce"
+  digest = "1:3fa58f7377e1d95d496db43dd3281ddcea4185eb46c6394f89fec1cfa4ec3244"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "5f54ce54270977bfbd7353a37e64c13d6bd6c9c9"
+  revision = "742c48ecaeb7c624c475e02f3eb0827ebb4970d4"
 
 [[projects]]
   digest = "1:8d8faad6b12a3a4c819a3f9618cb6ee1fa1cfc33253abeeea8b55336721e3405"
@@ -571,7 +571,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = "UT"
-  revision = "c459b9ce5143dd819763d9329ff92a8e35e61bd9"
+  revision = "548a555dbc03994223efbaba0090152849259498"
 
 [[projects]]
   digest = "1:6cd77d0b616d2dcebd363dfecba593f27b0151fc82cdb5fbfb96c5a7cfbc95b5"
