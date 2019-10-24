@@ -68,7 +68,6 @@ func StopGrpcServer() {
 	if server != nil {
 		server.GracefulStop()
 		server = nil
-		grpcAddress = nil
 	}
 }
 
