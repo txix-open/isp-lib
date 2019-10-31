@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cenkalti/backoff"
 	etp "github.com/integration-system/isp-etp-go/client"
 	"github.com/integration-system/isp-lib/config"
 	"github.com/integration-system/isp-lib/config/schema"
@@ -15,7 +14,6 @@ import (
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
 	"github.com/thecodeteam/goodbye"
-	"math/rand"
 	"net/http"
 	"os"
 	"time"
@@ -38,8 +36,7 @@ type runner struct {
 	disconnectChan   chan struct{}
 
 	client                   etp.Client
-	configConnStrings        []string
-	currentConnStringIdx     int
+	connStrings              *RoundRobinStrings
 	ready                    bool
 	lastFailedConnectionTime time.Time
 
@@ -207,13 +204,13 @@ func (b *runner) initSocketConnection() etp.Client {
 		b.disconnectChan <- struct{}{}
 	})
 
-	socketConfig := b.makeSocketConfig(b.localConfigPtr)
-	if len(b.configConnStrings) == 0 {
+	if b.connStrings == nil {
+		socketConfig := b.makeSocketConfig(b.localConfigPtr)
 		connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
 		if err != nil {
 			panic(err)
 		}
-		b.configConnStrings = connectionStrings
+		b.connStrings = NewRoundRobinStrings(connectionStrings)
 	}
 
 	if b.onSocketErrorReceive != nil {
@@ -237,7 +234,7 @@ func (b *runner) initSocketConnection() etp.Client {
 		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(event, b.connectEventChan)))
 	}
 
-	err := client.Dial(b.ctx, b.nextConfigServiceUrl())
+	err := client.Dial(b.ctx, b.connStrings.Get())
 	for err != nil {
 		log.Errorf(stdcodes.ConfigServiceConnectionError, "could not connect to config service: %v", err)
 		b.lastFailedConnectionTime = time.Now()
@@ -248,23 +245,10 @@ func (b *runner) initSocketConnection() etp.Client {
 		case <-time.After(defaultConfigServiceConnectionTimeout):
 
 		}
-		err = client.Dial(b.ctx, b.nextConfigServiceUrl())
+		err = client.Dial(b.ctx, b.connStrings.Get())
 	}
 
 	return client
-}
-
-func (b *runner) nextConfigServiceUrl() string {
-	if b.currentConnStringIdx == -1 {
-		var random = rand.New(rand.NewSource(time.Now().UnixNano()))
-		b.currentConnStringIdx = random.Intn(len(b.configConnStrings))
-	} else {
-		b.currentConnStringIdx += 1
-		if b.currentConnStringIdx > len(b.configConnStrings)-1 {
-			b.currentConnStringIdx = 0
-		}
-	}
-	return b.configConnStrings[b.currentConnStringIdx]
 }
 
 func (b *runner) initStatusMetrics() {
@@ -312,9 +296,7 @@ func (b *runner) sendModuleRequirements() {
 	}
 
 	if !requirements.IsEmpty() {
-		backOff := backoff.NewExponentialBackOff()
-		backOff.MaxElapsedTime = defaultMaxAckRetryTimeout
-		bf := backoff.WithContext(backOff, b.ctx)
+		bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
 		if ok, bytes, res := ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf); ok {
 			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes), "response": string(res)}).
 				Info(stdcodes.ConfigServiceSendRequirements, "send module requirements")
@@ -327,9 +309,7 @@ func (b *runner) sendModuleDeclaration(eventType string) {
 
 	declaration := getModuleDeclaration(b.moduleInfo)
 
-	backOff := backoff.NewExponentialBackOff()
-	backOff.MaxElapsedTime = defaultMaxAckRetryTimeout
-	bf := backoff.WithContext(backOff, b.ctx)
+	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
 	if ok, bytes, res := ackEvent(b.client, eventType, declaration, bf); ok {
 		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes), "response": string(res)}).
 			Info(stdcodes.ConfigServiceSendModuleReady, "send module declaration")
@@ -347,9 +327,7 @@ func (b *runner) sendModuleConfigSchema() {
 		req.DefaultConfig = defaultCfg
 	}
 
-	backOff := backoff.NewExponentialBackOff()
-	backOff.MaxElapsedTime = defaultMaxAckRetryTimeout
-	bf := backoff.WithContext(backOff, b.ctx)
+	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
 	if ok, _, resp := ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf); ok {
 		log.WithMetadata(log.Metadata{"response": resp}).
 			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
@@ -381,6 +359,5 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 		connectEventChan:       make(chan connectEvent),
 		routesChan:             make(chan structure.RoutingConfig),
 		disconnectChan:         make(chan struct{}),
-		currentConnStringIdx:   -1,
 	}
 }

@@ -10,11 +10,13 @@ import (
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
+	"math/rand"
 	"net"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func assertSingleParamFunc(rt reflect.Type, expectingType string) {
@@ -155,4 +157,36 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 	}
 
 	return true, bytes, response
+}
+
+func getDefaultBackoff(ctx context.Context, maxElapsedTime time.Duration) backoff.BackOff {
+	backOff := backoff.NewExponentialBackOff()
+	backOff.MaxElapsedTime = maxElapsedTime
+	bf := backoff.WithContext(backOff, ctx)
+	return bf
+}
+
+type RoundRobinStrings struct {
+	strings []string
+	index   int
+}
+
+func (u *RoundRobinStrings) Get() string {
+	if u.index == -1 {
+		var random = rand.New(rand.NewSource(time.Now().UnixNano()))
+		u.index = random.Intn(len(u.strings))
+	} else {
+		u.index += 1
+		if u.index > len(u.strings)-1 {
+			u.index = 0
+		}
+	}
+	return u.strings[u.index]
+}
+
+func NewRoundRobinStrings(urls []string) *RoundRobinStrings {
+	return &RoundRobinStrings{
+		strings: urls,
+		index:   -1,
+	}
 }
