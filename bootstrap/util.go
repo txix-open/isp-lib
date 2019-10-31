@@ -1,18 +1,20 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/integration-system/golang-socketio"
+	"github.com/cenkalti/backoff"
+	etp "github.com/integration-system/isp-etp-go/client"
 	"github.com/integration-system/isp-lib/backend"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"net"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func assertSingleParamFunc(rt reflect.Type, expectingType string) {
@@ -90,16 +92,21 @@ func getModuleDeclaration(moduleInfo ModuleInfo) structure.BackendDeclaration {
 	}
 }
 
-func getConfigServiceConnectionString(sc structure.SocketConfiguration) string {
-	connectionString := sc.ConnectionString
-	port, _ := strconv.Atoi(sc.Port)
-	if connectionString == "" {
-		connectionString = gosocketio.GetUrl(
-			sc.Host,
-			port,
-			sc.Secure,
-			sc.UrlParams,
-		)
+func getWsUrl(host string, port int, secure bool, params map[string]string) string {
+	var prefix string
+	if secure {
+		prefix = "wss://"
+	} else {
+		prefix = "ws://"
+	}
+	etpUrl := "/isp-etp/"
+	connectionString := prefix + host + ":" + strconv.Itoa(port) + etpUrl
+	if len(params) > 0 {
+		vals := url.Values{}
+		for k, v := range params {
+			vals.Add(k, v)
+		}
+		connectionString += "?" + vals.Encode()
 	}
 	return connectionString
 }
@@ -116,7 +123,7 @@ func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]stri
 		if err != nil {
 			return nil, err
 		}
-		connectionString := gosocketio.GetUrl(
+		connectionString := getWsUrl(
 			hosts[i],
 			port,
 			sc.Secure,
@@ -127,28 +134,25 @@ func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]stri
 	return connStrings, nil
 }
 
-func emitEvent(c *gosocketio.Client, event string, data interface{}, ackTimeout time.Duration) (bool, []byte, string) {
+func ackEvent(client etp.Client, event string, data interface{}, bf backoff.BackOff) (bool, []byte, []byte) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		log.WithMetadata(log.Metadata{"event": event}).
 			Errorf(stdcodes.ConfigServiceSendDataError, "marshal payload to json: %v", err)
-		return false, nil, ""
+		return false, nil, nil
 	}
 
-	var (
-		res string
-	)
-	if ackTimeout > 0 {
-		res, err = c.Ack(event, string(bytes), ackTimeout)
-	} else {
-		err = c.Emit(event, string(bytes))
+	var response []byte
+	ack := func() error {
+		response, err = client.EmitWithAck(context.Background(), event, bytes)
+		return err
 	}
-
+	err = backoff.Retry(ack, bf)
 	if err != nil {
 		log.WithMetadata(log.Metadata{"event": event}).
-			Errorf(stdcodes.ConfigServiceSendDataError, "emit event to config service: %v", err)
-		return false, bytes, ""
+			Errorf(stdcodes.ConfigServiceSendDataError, "ack event to config service: %v", err)
+		return false, bytes, nil
 	}
 
-	return true, bytes, res
+	return true, bytes, response
 }

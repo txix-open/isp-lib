@@ -97,7 +97,7 @@ func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface
 	return configInstance
 }
 
-func InitRemoteConfig(configuration interface{}, remoteConfig string) interface{} {
+func InitRemoteConfig(configuration interface{}, remoteConfig []byte) interface{} {
 	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
 	if err != nil {
 		log.WithMetadata(log.Metadata{"config": remoteConfig}).
@@ -215,7 +215,7 @@ func validateConfig(cfg interface{}) error {
 	}
 }
 
-func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) {
+func overrideConfigurationFromEnv(src []byte, envPrefix string) ([]byte, error) {
 	envPrefix = envPrefix + "_"
 	overrides := getEnvOverrides(envPrefix)
 	if len(overrides) == 0 {
@@ -223,9 +223,9 @@ func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) 
 	}
 
 	m := make(map[string]interface{})
-	err := json.Unmarshal([]byte(src), &m)
+	err := json.Unmarshal(src, &m)
 	if err != nil {
-		return "", fmt.Errorf("unmarshal to map: %v", err)
+		return nil, fmt.Errorf("unmarshal to map: %v", err)
 	}
 
 	m = bellows.Flatten(m)
@@ -236,7 +236,7 @@ func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) 
 
 	for path, val := range overrides {
 		if newValue, err := castString(val); err != nil {
-			return "", fmt.Errorf("could not override remote config variable %s, new value: %v, err: %v", path, val, err)
+			return nil, fmt.Errorf("could not override remote config variable %s, new value: %v, err: %v", path, val, err)
 		} else {
 			flattenMap[path] = newValue
 		}
@@ -245,8 +245,8 @@ func overrideConfigurationFromEnv(src string, envPrefix string) (string, error) 
 	expandedMap := bellows.Expand(flattenMap)
 	bytes, err := json.Marshal(expandedMap)
 	if err != nil {
-		return "", fmt.Errorf("marhal to json: %v", err)
+		return nil, fmt.Errorf("marhal to json: %v", err)
 	}
 
-	return string(bytes), nil
+	return bytes, nil
 }

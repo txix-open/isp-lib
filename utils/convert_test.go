@@ -15,7 +15,7 @@ var (
 	srcMap   map[string]interface{}
 	srcBytes []byte
 	grpcSrc  *structpb.Value
-	ji       = jsoniter.ConfigFastest
+	jiTest   = jsoniter.ConfigFastest
 	bufPool  = sync.Pool{
 		New: func() interface{} {
 			b := make([]byte, 0, 24*1024)
@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	err := ji.Unmarshal(srcJson, &srcMap)
+	err := jiTest.Unmarshal(srcJson, &srcMap)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func BenchmarkToJsonStd(b *testing.B) {
 
 func BenchmarkToJsonJsoniter(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := ji.Marshal(srcMap)
+		_, err := jiTest.Marshal(srcMap)
 		if err != nil {
 			panic(err)
 		}
@@ -102,7 +102,7 @@ func BenchmarkFromJsonStd(b *testing.B) {
 func BenchmarkFromJsonJsoniter(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		m := make(map[string]interface{})
-		err := ji.Unmarshal(srcJson, &m)
+		err := jiTest.Unmarshal(srcJson, &m)
 		if err != nil {
 			panic(err)
 		}
