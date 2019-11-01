@@ -28,6 +28,7 @@ const (
 
 	ModuleNameGetParamKey   = "module_name"
 	InstanceUuidGetParamKey = "instance_uuid"
+	WsOkResponse            = "ok"
 )
 
 func ModuleConnected(moduleName string) string {

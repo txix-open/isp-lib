@@ -3,11 +3,13 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/cenkalti/backoff"
 	etp "github.com/integration-system/isp-etp-go/client"
 	"github.com/integration-system/isp-lib/backend"
 	"github.com/integration-system/isp-lib/structure"
+	"github.com/integration-system/isp-lib/utils"
 	"github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"math/rand"
@@ -147,7 +149,12 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 	var response []byte
 	ack := func() error {
 		response, err = client.EmitWithAck(context.Background(), event, bytes)
-		return err
+		if err != nil {
+			return err
+		} else if string(response) != utils.WsOkResponse {
+			return errors.New("invalid response")
+		}
+		return nil
 	}
 	err = backoff.Retry(ack, bf)
 	if err != nil {
