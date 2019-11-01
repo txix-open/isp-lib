@@ -35,14 +35,14 @@ type bootstrapConfiguration struct {
 	onShutdown            shutdownHandler
 	onModuleReady         func()
 
-	requiredModules  map[string]*connectConsumer
+	// module name -> consumer
+	requiredModules map[string]*connectConsumer
+	// module_connected event -> addresses
 	connectedModules map[string][]string
 
 	makeSocketConfig   socketConfigProducer
 	makeModuleInfo     moduleInfoProducer
 	declaratorAcquirer declaratorAcquirer
-
-	subs map[string]interface{}
 }
 
 /**
@@ -107,12 +107,6 @@ func (cfg *bootstrapConfiguration) OnShutdown(f shutdownHandler) *bootstrapConfi
 	return cfg
 }
 
-// subscribe to web-socket event
-func (cfg *bootstrapConfiguration) OnSocketEvent(event string, f interface{}) *bootstrapConfiguration {
-	cfg.subs[event] = f
-	return cfg
-}
-
 /**
  * Specify the socket builder function that creates a socket configuration
  */
@@ -141,7 +135,7 @@ func (cfg *bootstrapConfiguration) RequireRoutes(f routesConsumer) *bootstrapCon
 
 // module is in not ready state until establish grpc connection with required modules
 func (cfg *bootstrapConfiguration) RequireModule(moduleName string, consumer addressListConsumer, mustConnect bool) *bootstrapConfiguration {
-	cfg.requiredModules[utils.ModuleConnected(moduleName)] = &connectConsumer{mustConnect: mustConnect, consumer: consumer}
+	cfg.requiredModules[moduleName] = &connectConsumer{mustConnect: mustConnect, consumer: consumer}
 	return cfg
 }
 
@@ -176,7 +170,6 @@ func ServiceBootstrap(localConfigPtr, remoteConfigPtr interface{}) *bootstrapCon
 		localConfigPtr:   localConfigPtr,
 		localConfigType:  reflect.TypeOf(localConfigPtr).String(),
 		requiredModules:  make(map[string]*connectConsumer),
-		subs:             make(map[string]interface{}),
 		connectedModules: make(map[string][]string),
 	}
 	if remoteConfigPtr != nil {

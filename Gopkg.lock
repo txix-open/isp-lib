@@ -18,6 +18,14 @@
   version = "v0.1.1"
 
 [[projects]]
+  digest = "1:c1100fc71e23b6a32b2c68a5202a848fd13811d5a10b12edb8019c3667d1cd9a"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4b4cebaf850ec58f1bb1fec5bdebdf8501c2bc3f"
+  version = "v3.0.0"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -99,14 +107,6 @@
   version = "v1.3.2"
 
 [[projects]]
-  digest = "1:e62657cca9badaa308d86e7716083e4c5933bb78e30a17743fc67f50be26f6f4"
-  name = "github.com/gorilla/websocket"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b"
-  version = "v1.4.1"
-
-[[projects]]
   digest = "1:e03ebb3114d926b71fb8f52cefa8045e71c37f62096f7c99794d87b223d5f21f"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
@@ -159,24 +159,26 @@
   revision = "ac5582987a2f25e8743e0ebb7259312adda05c23"
 
 [[projects]]
-  digest = "1:12bcebed6dfc45cedc650f6dce60fe6ce6d27de88d9bfa8893a5b144c010d317"
-  name = "github.com/integration-system/golang-socketio"
-  packages = [
-    ".",
-    "protocol",
-    "transport",
-  ]
-  pruneopts = "UT"
-  revision = "7513a9b590e428674e3c22ea82f46b28890cc17a"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   digest = "1:abd0cd78d6d27a98080f2b2a7fd39bb2f3d3eef6aa20c720093129f04fb41d78"
   name = "github.com/integration-system/gowsdl"
   packages = ["soap"]
   pruneopts = "UT"
   revision = "368713356c71961354e09ab9b734740ebdd94784"
+
+[[projects]]
+  digest = "1:143c6b11b882aae2896e07caad401ec0be62c330a85526b954a2cc5bdb3f75d7"
+  name = "github.com/integration-system/isp-etp-go"
+  packages = [
+    "ack",
+    "bpool",
+    "client",
+    "gen",
+    "parser",
+  ]
+  pruneopts = "UT"
+  revision = "6e92a3dda2cf7c6ec82fc1a1ae922248754e49d9"
+  version = "v2.0.0"
 
 [[projects]]
   branch = "master"
@@ -632,12 +634,25 @@
   source = "https://github.com/mellium/sasl.git"
   version = "v0.2.1"
 
+[[projects]]
+  digest = "1:3b259d69525636f66fabb6de37762a0c02e43b20fce972a454eedc6618067133"
+  name = "nhooyr.io/websocket"
+  packages = [
+    ".",
+    "internal/bpool",
+    "internal/wsjs",
+  ]
+  pruneopts = "UT"
+  revision = "8bf88772e1209d96a00bc38276cda458661ebe2b"
+  version = "v1.7.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/asaskevich/govalidator",
     "github.com/buaazp/fasthttprouter",
+    "github.com/cenkalti/backoff",
     "github.com/fsnotify/fsnotify",
     "github.com/go-pg/pg",
     "github.com/go-redis/redis",
@@ -647,8 +662,8 @@
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/integration-system/bellows",
     "github.com/integration-system/go-cmp/cmp",
-    "github.com/integration-system/golang-socketio",
     "github.com/integration-system/gowsdl/soap",
+    "github.com/integration-system/isp-etp-go/client",
     "github.com/integration-system/isp-log",
     "github.com/integration-system/isp-log/stdcodes",
     "github.com/integration-system/jsonschema",

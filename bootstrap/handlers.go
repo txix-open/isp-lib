@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"encoding/json"
-	"github.com/integration-system/golang-socketio"
 	"github.com/integration-system/isp-lib/structure"
 	"github.com/integration-system/isp-lib/utils"
 	log "github.com/integration-system/isp-log"
@@ -10,53 +9,50 @@ import (
 	"reflect"
 )
 
-func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func(*gosocketio.Channel, string) error {
-	return func(_ *gosocketio.Channel, data string) error {
+func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func([]byte) {
+	return func(data []byte) {
 		list := make([]structure.AddressConfiguration, 0)
-		if err := json.Unmarshal([]byte(data), &list); err != nil {
-			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+		if err := json.Unmarshal(data, &list); err != nil {
+			log.WithMetadata(log.Metadata{"event": event, "data": string(data)}).
 				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid address list: %v", err)
-			return err
 		} else {
-			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+			log.WithMetadata(log.Metadata{"event": event, "data": string(data)}).
 				Info(stdcodes.ConfigServiceReceiveRequiredModuleAddress, "received required module address list")
 			f(list)
 		}
-		return nil
 	}
 }
 
-func handleRemoteConfiguration(remoteConfigChan chan string, event string) func(c *gosocketio.Channel, data string) error {
-	return func(c *gosocketio.Channel, data string) error {
-		log.WithMetadata(log.Metadata{"config": data}).
+func handleRemoteConfiguration(remoteConfigChan chan []byte, event string) func([]byte) {
+	return func(data []byte) {
+		log.WithMetadata(log.Metadata{"config": string(data)}).
 			Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
 		remoteConfigChan <- data
-		return nil
 	}
 }
 
-func handleError(onSocketErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args map[string]interface{}) error {
-	return func(c *gosocketio.Channel, args map[string]interface{}) error {
+func handleError(onSocketErrorReceive *reflect.Value, event string) func([]byte) {
+	return func(data []byte) {
+		var args map[string]interface{}
+		_ = json.Unmarshal(data, &args)
 		callFunc(onSocketErrorReceive, args)
-		return nil
 	}
 }
 
-func handleConfigError(onConfigErrorReceive *reflect.Value, event string) func(c *gosocketio.Channel, args string) error {
-	return func(c *gosocketio.Channel, args string) error {
-		callFunc(onConfigErrorReceive, args)
-		return nil
+func handleConfigError(onConfigErrorReceive *reflect.Value, event string) func([]byte) {
+	return func(data []byte) {
+		callFunc(onConfigErrorReceive, string(data))
 	}
 }
 
-func handleRoutes(routesChan chan structure.RoutingConfig, event string) func(c *gosocketio.Channel, args string) error {
-	return func(c *gosocketio.Channel, data string) error {
+func handleRoutes(routesChan chan structure.RoutingConfig, event string) func([]byte) {
+	return func(data []byte) {
 		routes := structure.RoutingConfig{}
-		err := json.Unmarshal([]byte(data), &routes)
+		err := json.Unmarshal(data, &routes)
 		if err != nil {
-			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+			log.WithMetadata(log.Metadata{"event": event, "data": string(data)}).
 				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid routes list: %v", err)
-			return err
+			return
 		}
 
 		if err := utils.Validate(routes); err == nil {
@@ -68,11 +64,9 @@ func handleRoutes(routesChan chan structure.RoutingConfig, event string) func(c 
 			log.WithMetadata(log.Metadata{"total_modules": totalModules, "total_endpoints": totalEndpoints}).
 				Info(stdcodes.ConfigServiceReceiveRoutes, "received routes")
 			routesChan <- routes
-			return nil
 		} else {
-			log.WithMetadata(log.Metadata{"event": event, "data": data}).
+			log.WithMetadata(log.Metadata{"event": event, "data": string(data)}).
 				Errorf(stdcodes.ConfigServiceInvalidDataReceived, "received invalid routes list: %v", err)
-			return err
 		}
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/integration-system/golang-socketio"
+	etp "github.com/integration-system/isp-etp-go/client"
 	"github.com/integration-system/isp-lib/config"
 	"github.com/integration-system/isp-lib/config/schema"
 	"github.com/integration-system/isp-lib/metric"
@@ -14,14 +14,15 @@ import (
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
 	"github.com/thecodeteam/goodbye"
+	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
 const (
 	defaultConfigServiceConnectionTimeout = 1 * time.Second
 	defaultRemoteConfigAwaitTimeout       = 3 * time.Second
+	defaultMaxAckRetryTimeout             = 10 * time.Second
 )
 
 type runner struct {
@@ -29,19 +30,22 @@ type runner struct {
 
 	moduleInfo ModuleInfo
 
-	remoteConfigChan chan string
+	remoteConfigChan chan []byte
 	routesChan       chan structure.RoutingConfig
 	connectEventChan chan connectEvent
-	exitChan         chan struct{}
 	disconnectChan   chan struct{}
 
-	client                   *gosocketio.Client
+	client                   etp.Client
+	connStrings              *RoundRobinStrings
 	ready                    bool
 	lastFailedConnectionTime time.Time
+
+	ctx context.Context
 }
 
 func (b *runner) run() {
 	ctx := b.initShutdownHandler()
+	b.ctx = ctx
 	defer goodbye.Exit(ctx, 0)
 
 	defer func() {
@@ -51,16 +55,20 @@ func (b *runner) run() {
 		}
 	}()
 
-	b.initLocalConfig()      //read local configuration, calls callback
-	b.initModuleInfo()       //set moduleInfo
-	b.initSocketConnection() //create socket.io object, subscribe to all events
-	b.initStatusMetrics()    //add socket and required modules connections checkers in metrics
+	b.initLocalConfig()                //read local configuration, calls callback
+	b.initModuleInfo()                 //set moduleInfo
+	client := b.initSocketConnection() //create socket object, subscribe to all events
+	if client == nil {
+		return
+	}
+	b.client = client
+	b.initStatusMetrics() //add socket and required modules connections checkers in metrics
 
 	if b.declaratorAcquirer != nil {
 		b.declaratorAcquirer(&declarator{b.sendModuleDeclaration}) //provides module declarator to clients code
 	}
 
-	b.sendModuleConfigSchema() //create and send schema with default remote config
+	go b.sendModuleConfigSchema() //create and send schema with default remote config
 
 	b.ready = false //module not ready state by default
 
@@ -87,7 +95,7 @@ func (b *runner) run() {
 
 			remoteConfigReady = true
 			if !b.ready {
-				b.sendModuleRequirements() //after first time receiving config, send requirements
+				go b.sendModuleRequirements() //after first time receiving config, send requirements
 			}
 
 			remoteConfigTimeoutChan = neverTriggerChan //stop flooding in logs
@@ -127,11 +135,18 @@ func (b *runner) run() {
 			if b.onModuleReady != nil {
 				b.onModuleReady()
 			}
-			b.sendModuleReady()
+			go b.sendModuleReady()
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.ready = false
 			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
-		case <-b.exitChan: //return from main goroutine after shutdown signal
+			client := b.initSocketConnection()
+			// true only if exitChan closed
+			if client == nil {
+				return
+			}
+			b.client = client
+			go b.sendModuleConfigSchema()
+		case <-b.ctx.Done(): //return from main goroutine after shutdown signal
 			return
 		}
 
@@ -139,14 +154,15 @@ func (b *runner) run() {
 }
 
 func (b *runner) initShutdownHandler() context.Context {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	goodbye.Notify(ctx)
 	goodbye.Register(func(ctx context.Context, sig os.Signal) {
 		log.Info(stdcodes.ModuleManualShutdown, "module shutting down now")
 
-		if b.client != nil {
-			b.client.Close()
+		cancel()
+		if b.client != nil && !b.client.Closed() {
+			_ = b.client.Close()
 		}
 
 		if b.onShutdown != nil {
@@ -154,8 +170,6 @@ func (b *runner) initShutdownHandler() context.Context {
 		}
 
 		log.Info(stdcodes.ModuleManualShutdown, "module has gracefully shut down")
-
-		close(b.exitChan)
 	})
 
 	return ctx
@@ -175,70 +189,66 @@ func (b *runner) initModuleInfo() {
 	b.moduleInfo = b.makeModuleInfo(config.Get())
 }
 
-func (b *runner) initSocketConnection() {
+func (b *runner) initSocketConnection() etp.Client {
 	if b.makeSocketConfig == nil {
 		panic(errors.New("socket configuration is not specified. Call 'SocketConfiguration' first"))
-		return
 	}
 
-	socketConfig := b.makeSocketConfig(b.localConfigPtr)
-	builder := gosocketio.NewClientBuilder().
-		EnableReconnection().
-		ReconnectionTimeout(defaultConfigServiceConnectionTimeout).
-		OnReconnectionError(func(err error) {
-			log.Errorf(stdcodes.ConfigServiceConnectionError, "could not reconnect to config service: %v", err)
-			b.lastFailedConnectionTime = time.Now()
-		}).
-		On(gosocketio.OnDisconnection, func(arg interface{}) error {
-			log.Error(stdcodes.ConfigServiceDisconnection, "disconnected from config service")
-			b.lastFailedConnectionTime = time.Now()
-			b.disconnectChan <- struct{}{}
-			return nil
-		}, nil)
-	connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
-	if err != nil {
-		panic(err)
+	etpConfig := etp.Config{
+		HttpClient: http.DefaultClient,
 	}
-	c := builder.BuildToConnectMany(connectionStrings)
+	client := etp.NewClient(etpConfig)
+	client.OnDisconnect(func(err error) {
+		log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service: %v", err)
+		b.lastFailedConnectionTime = time.Now()
+		b.disconnectChan <- struct{}{}
+	})
+
+	if b.connStrings == nil {
+		socketConfig := b.makeSocketConfig(b.localConfigPtr)
+		connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
+		if err != nil {
+			panic(err)
+		}
+		b.connStrings = NewRoundRobinStrings(connectionStrings)
+	}
 
 	if b.onSocketErrorReceive != nil {
-		must(c.On(utils.ErrorConnection, handleError(b.onSocketErrorReceive, utils.ErrorConnection)))
+		client.On(utils.ErrorConnection, handleError(b.onSocketErrorReceive, utils.ErrorConnection))
 	}
 	if b.onConfigErrorReceive != nil {
-		must(c.On(utils.ConfigError, handleConfigError(b.onConfigErrorReceive, utils.ConfigError)))
+		client.On(utils.ConfigError, handleConfigError(b.onConfigErrorReceive, utils.ConfigError))
 	}
 	if b.remoteConfigPtr != nil {
-		must(c.On(utils.ConfigSendConfigWhenConnected, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigWhenConnected)))
-		must(c.On(utils.ConfigSendConfigChanged, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigChanged)))
-		must(c.On(utils.ConfigSendConfigOnRequest, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigOnRequest)))
+		client.On(utils.ConfigSendConfigWhenConnected, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigWhenConnected))
+		client.On(utils.ConfigSendConfigChanged, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigChanged))
+		client.On(utils.ConfigSendConfigOnRequest, handleRemoteConfiguration(b.remoteConfigChan, utils.ConfigSendConfigOnRequest))
 	}
 	if b.onRoutesReceive != nil {
-		must(c.On(utils.ConfigSendRoutesChanged, handleRoutes(b.routesChan, utils.ConfigSendRoutesChanged)))
-		must(c.On(utils.ConfigSendRoutesWhenConnected, handleRoutes(b.routesChan, utils.ConfigSendRoutesWhenConnected)))
-		must(c.On(utils.ConfigSendRoutesOnRequest, handleRoutes(b.routesChan, utils.ConfigSendRoutesOnRequest)))
+		client.On(utils.ConfigSendRoutesChanged, handleRoutes(b.routesChan, utils.ConfigSendRoutesChanged))
+		client.On(utils.ConfigSendRoutesWhenConnected, handleRoutes(b.routesChan, utils.ConfigSendRoutesWhenConnected))
+		client.On(utils.ConfigSendRoutesOnRequest, handleRoutes(b.routesChan, utils.ConfigSendRoutesOnRequest))
 	}
-	for e := range b.requiredModules {
-		must(c.On(e, UnmarshalAddressListAndThen(e, makeAddressListConsumer(e, b.connectEventChan))))
-	}
-	for e, f := range b.subs {
-		must(c.On(e, f))
+	for module := range b.requiredModules {
+		event := utils.ModuleConnected(module)
+		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(event, b.connectEventChan)))
 	}
 
-	err = c.Dial()
+	err := client.Dial(b.ctx, b.connStrings.Get())
 	for err != nil {
 		log.Errorf(stdcodes.ConfigServiceConnectionError, "could not connect to config service: %v", err)
 		b.lastFailedConnectionTime = time.Now()
 
 		select {
-		case <-b.exitChan:
-			return
+		case <-b.ctx.Done():
+			return nil
 		case <-time.After(defaultConfigServiceConnectionTimeout):
 
 		}
-		err = c.Dial()
+		err = client.Dial(b.ctx, b.connStrings.Get())
 	}
 
-	b.client = c
+	return client
 }
 
 func (b *runner) initStatusMetrics() {
@@ -246,7 +256,7 @@ func (b *runner) initStatusMetrics() {
 		socketConfig := b.makeSocketConfig(b.localConfigPtr)
 		uri := fmt.Sprintf("%s:%s", socketConfig.Host, socketConfig.Port)
 		status := true
-		if b.client == nil || !b.client.IsAlive() {
+		if b.client == nil || b.client.Closed() {
 			status = false
 		}
 		lastFailedConnectionMsAgo := time.Duration(0)
@@ -261,11 +271,10 @@ func (b *runner) initStatusMetrics() {
 		}
 	})
 
-	for k := range b.requiredModules {
-		moduleName := strings.Replace(k, "_"+utils.ModuleConnectionSuffix, "", -1)
-		keyCopy := k
-		metric.InitStatusChecker(fmt.Sprintf("%s-grpc", moduleName), func() interface{} {
-			addrList, ok := b.connectedModules[keyCopy]
+	for module := range b.requiredModules {
+		moduleConnected := utils.ModuleConnected(module)
+		metric.InitStatusChecker(fmt.Sprintf("%s-grpc", module), func() interface{} {
+			addrList, ok := b.connectedModules[moduleConnected]
 			if ok {
 				return addrList
 			} else {
@@ -287,8 +296,9 @@ func (b *runner) sendModuleRequirements() {
 	}
 
 	if !requirements.IsEmpty() {
-		if ok, bytes, _ := emitEvent(b.client, utils.ModuleSendRequirements, requirements, 0); ok {
-			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes)}).
+		bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+		if ok, bytes, res := ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf); ok {
+			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes), "response": string(res)}).
 				Info(stdcodes.ConfigServiceSendRequirements, "send module requirements")
 		}
 	}
@@ -299,8 +309,9 @@ func (b *runner) sendModuleDeclaration(eventType string) {
 
 	declaration := getModuleDeclaration(b.moduleInfo)
 
-	if ok, bytes, _ := emitEvent(b.client, eventType, declaration, 0); ok {
-		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes)}).
+	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+	if ok, bytes, res := ackEvent(b.client, eventType, declaration, bf); ok {
+		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes), "response": string(res)}).
 			Info(stdcodes.ConfigServiceSendModuleReady, "send module declaration")
 	}
 }
@@ -316,7 +327,8 @@ func (b *runner) sendModuleConfigSchema() {
 		req.DefaultConfig = defaultCfg
 	}
 
-	if ok, _, resp := emitEvent(b.client, utils.ModuleSendConfigSchema, req, 5*time.Second); ok {
+	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+	if ok, _, resp := ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf); ok {
 		log.WithMetadata(log.Metadata{"response": resp}).
 			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
 	}
@@ -343,9 +355,8 @@ func (b *runner) initialState() (remoteConfigReady, requiredModulesReady, routes
 func makeRunner(cfg bootstrapConfiguration) *runner {
 	return &runner{
 		bootstrapConfiguration: cfg,
-		remoteConfigChan:       make(chan string),
+		remoteConfigChan:       make(chan []byte),
 		connectEventChan:       make(chan connectEvent),
-		exitChan:               make(chan struct{}),
 		routesChan:             make(chan structure.RoutingConfig),
 		disconnectChan:         make(chan struct{}),
 	}

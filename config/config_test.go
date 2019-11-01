@@ -40,7 +40,7 @@ func TestRemoteConfigOverride(t *testing.T) {
 	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_C", "false#{bool}"))
 	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_D.CAMELCASE", "test2#{string}"))
 
-	ptr := InitRemoteConfig(&original, string(bytes)).(*Config)
+	ptr := InitRemoteConfig(&original, bytes).(*Config)
 	original = *ptr
 
 	assert.Equal(expect, original)
@@ -52,12 +52,12 @@ func TestInitRemoteConfig(t *testing.T) {
 	oldConfig, expectedConfig := getFirstConfData()
 	remoteConfig, err := json.Marshal(expectedConfig)
 	assert.NoError(err)
-	assert.Equal(expectedConfig, InitRemoteConfig(oldConfig, string(remoteConfig)))
+	assert.Equal(expectedConfig, InitRemoteConfig(oldConfig, remoteConfig))
 
 	secOldConf, secExpConf := getSecondConfData()
 	secRemoteConf, err := json.Marshal(secExpConf)
 	assert.NoError(err)
-	assert.Equal(secExpConf, InitRemoteConfig(secOldConf, string(secRemoteConf)))
+	assert.Equal(secExpConf, InitRemoteConfig(secOldConf, secRemoteConf))
 }
 
 func getFirstConfData() (oldConfig, newConfig interface{}) {

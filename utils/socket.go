@@ -25,6 +25,10 @@ const (
 	ModuleSendConfigSchema = "MODULE:SEND_CONFIG_SCHEMA"
 
 	ModuleConnectionSuffix = "MODULE_CONNECTED"
+
+	ModuleNameGetParamKey   = "module_name"
+	InstanceUuidGetParamKey = "instance_uuid"
+	WsOkResponse            = "ok"
 )
 
 func ModuleConnected(moduleName string) string {
@@ -33,11 +37,13 @@ func ModuleConnected(moduleName string) string {
 
 func ParseParameters(queryRaw string) (instanceUUID string, moduleName string, error error) {
 	parsedParams, _ := url.ParseQuery(queryRaw)
-	moduleName = parsedParams.Get("module_name")
-	instanceUuid := parsedParams.Get("instance_uuid")
+	moduleName = parsedParams.Get(ModuleNameGetParamKey)
+	instanceUuid := parsedParams.Get(InstanceUuidGetParamKey)
 	if moduleName == "" || instanceUuid == "" || !IsValidUUID(instanceUuid) {
-		err := fmt.Sprintf("SocketIO not received all parameters, module_name: %s, instance_uuid: %s",
+		err := fmt.Sprintf("Not received all get parameters, %s: %s, %s: %s",
+			ModuleNameGetParamKey,
 			moduleName,
+			InstanceUuidGetParamKey,
 			instanceUuid,
 		)
 		return "", "", errors.New(err)
