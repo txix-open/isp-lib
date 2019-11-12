@@ -60,7 +60,7 @@ func (d *declarator) DeclareRoutes() {
 
 // receive from config service when some required module connected/disconnected
 type connectEvent struct {
-	event       string
+	module      string
 	addressList []structure.AddressConfiguration
 }
 

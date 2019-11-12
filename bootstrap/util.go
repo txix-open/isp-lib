@@ -15,6 +15,7 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
+	"nhooyr.io/websocket"
 	"reflect"
 	"strconv"
 	"strings"
@@ -53,9 +54,9 @@ func must(err error) {
 	}
 }
 
-func makeAddressListConsumer(event string, c chan connectEvent) func([]structure.AddressConfiguration) {
+func makeAddressListConsumer(module string, c chan connectEvent) func([]structure.AddressConfiguration) {
 	return func(list []structure.AddressConfiguration) {
-		c <- connectEvent{event: event, addressList: list}
+		c <- connectEvent{module: module, addressList: list}
 	}
 }
 
@@ -147,9 +148,13 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 	}
 
 	var response []byte
+	var connClosedErr error
 	ack := func() error {
 		response, err = client.EmitWithAck(context.Background(), event, bytes)
-		if err != nil {
+		if errors.As(err, &websocket.CloseError{}) {
+			connClosedErr = err
+			return nil
+		} else if err != nil {
 			return err
 		} else if string(response) != utils.WsOkResponse {
 			return errors.New("invalid response")
@@ -157,6 +162,9 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 		return nil
 	}
 	err = backoff.Retry(ack, bf)
+	if connClosedErr != nil {
+		err = connClosedErr
+	}
 	if err != nil {
 		log.WithMetadata(log.Metadata{"event": event}).
 			Errorf(stdcodes.ConfigServiceSendDataError, "ack event to config service: %v", err)

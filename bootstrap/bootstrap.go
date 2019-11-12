@@ -37,7 +37,7 @@ type bootstrapConfiguration struct {
 
 	// module name -> consumer
 	requiredModules map[string]*connectConsumer
-	// module_connected event -> addresses
+	// module name -> addresses
 	connectedModules map[string][]string
 
 	makeSocketConfig   socketConfigProducer

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	defaultConfigServiceConnectionTimeout = 1 * time.Second
+	defaultConfigServiceConnectionTimeout = 400 * time.Millisecond
 	defaultRemoteConfigAwaitTimeout       = 3 * time.Second
 	defaultMaxAckRetryTimeout             = 10 * time.Second
 )
@@ -107,9 +107,9 @@ func (b *runner) run() {
 				routesReady = b.onRoutesReceive(routers)
 			}
 		case e := <-b.connectEventChan:
-			if c, ok := b.requiredModules[e.event]; ok {
+			if c, ok := b.requiredModules[e.module]; ok {
 				if ok := c.consumer(e.addressList); ok {
-					currentConnectedModules[e.event] = true
+					currentConnectedModules[e.module] = true
 				}
 
 				ok := true
@@ -123,12 +123,12 @@ func (b *runner) run() {
 				requiredModulesReady = ok
 
 				addrList := make([]string, 0, len(e.addressList))
-				if currentConnectedModules[e.event] {
+				if currentConnectedModules[e.module] {
 					for _, addr := range e.addressList {
 						addrList = append(addrList, addr.GetAddress())
 					}
 				}
-				b.connectedModules[e.event] = addrList
+				b.connectedModules[e.module] = addrList
 			}
 		case <-initChan:
 			b.ready = true
@@ -139,6 +139,11 @@ func (b *runner) run() {
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.ready = false
 			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
+			select {
+			case <-b.ctx.Done():
+				return
+			case <-time.After(defaultConfigServiceConnectionTimeout):
+			}
 			client := b.initSocketConnection()
 			// true only if exitChan closed
 			if client == nil {
@@ -231,7 +236,7 @@ func (b *runner) initSocketConnection() etp.Client {
 	}
 	for module := range b.requiredModules {
 		event := utils.ModuleConnected(module)
-		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(event, b.connectEventChan)))
+		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(module, b.connectEventChan)))
 	}
 
 	err := client.Dial(b.ctx, b.connStrings.Get())
@@ -272,9 +277,9 @@ func (b *runner) initStatusMetrics() {
 	})
 
 	for module := range b.requiredModules {
-		moduleConnected := utils.ModuleConnected(module)
+		moduleCopy := module
 		metric.InitStatusChecker(fmt.Sprintf("%s-grpc", module), func() interface{} {
-			addrList, ok := b.connectedModules[moduleConnected]
+			addrList, ok := b.connectedModules[moduleCopy]
 			if ok {
 				return addrList
 			} else {
@@ -329,7 +334,7 @@ func (b *runner) sendModuleConfigSchema() {
 
 	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
 	if ok, _, resp := ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf); ok {
-		log.WithMetadata(log.Metadata{"response": resp}).
+		log.WithMetadata(log.Metadata{"response": string(resp)}).
 			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
 	}
 }
