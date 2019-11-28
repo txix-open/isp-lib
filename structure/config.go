@@ -77,12 +77,13 @@ type NatsConfig struct {
 }
 
 type SocketConfiguration struct {
-	Host             string            `schema:"Хост"`
-	Port             string            `schema:"Порт"`
-	Path             string            `schema:"Путь"`
-	Secure           bool              `schema:"Защищенное соединение,если включено используется https"`
-	UrlParams        map[string]string `schema:"Параметры,"`
-	ConnectionString string            `schema:"Строка соединения"`
+	Host                string            `schema:"Хост"`
+	Port                string            `schema:"Порт"`
+	Path                string            `schema:"Путь"`
+	Secure              bool              `schema:"Защищенное соединение,если включено используется https"`
+	UrlParams           map[string]string `schema:"Параметры,"`
+	ConnectionString    string            `schema:"Строка соединения"`
+	ConnectionReadLimit int64             `schema:"Максимальное количество килобайт на чтение,при превышении соединение закрывается с ошибкой"`
 }
 
 type ElasticConfiguration struct {

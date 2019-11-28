@@ -21,9 +21,10 @@ import (
 )
 
 const (
-	defaultConfigServiceConnectionTimeout = 400 * time.Millisecond
-	defaultRemoteConfigAwaitTimeout       = 3 * time.Second
-	defaultMaxAckRetryTimeout             = 10 * time.Second
+	defaultConfigServiceConnectionTimeout       = 400 * time.Millisecond
+	defaultRemoteConfigAwaitTimeout             = 3 * time.Second
+	defaultMaxAckRetryTimeout                   = 10 * time.Second
+	defaultConnectionReadLimit            int64 = 4 << 20 // 4 MB
 )
 
 type runner struct {
@@ -200,8 +201,22 @@ func (b *runner) initSocketConnection() etp.Client {
 		panic(errors.New("socket configuration is not specified. Call 'SocketConfiguration' first"))
 	}
 
+	socketConfig := b.makeSocketConfig(b.localConfigPtr)
+	if b.connStrings == nil {
+		connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
+		if err != nil {
+			panic(err)
+		}
+		b.connStrings = NewRoundRobinStrings(connectionStrings)
+	}
+
+	connectionReadLimit := defaultConnectionReadLimit
+	if socketConfig.ConnectionReadLimit > 0 {
+		connectionReadLimit = socketConfig.ConnectionReadLimit << 10
+	}
 	etpConfig := etp.Config{
-		HttpClient: http.DefaultClient,
+		HttpClient:          http.DefaultClient,
+		ConnectionReadLimit: connectionReadLimit,
 	}
 	client := etp.NewClient(etpConfig)
 	client.OnDisconnect(func(err error) {
@@ -211,15 +226,6 @@ func (b *runner) initSocketConnection() etp.Client {
 		b.lastFailedConnectionTime = time.Now()
 		b.disconnectChan <- struct{}{}
 	})
-
-	if b.connStrings == nil {
-		socketConfig := b.makeSocketConfig(b.localConfigPtr)
-		connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
-		if err != nil {
-			panic(err)
-		}
-		b.connStrings = NewRoundRobinStrings(connectionStrings)
-	}
 
 	if b.onSocketErrorReceive != nil {
 		client.On(utils.ErrorConnection, handleError(b.onSocketErrorReceive, utils.ErrorConnection))
