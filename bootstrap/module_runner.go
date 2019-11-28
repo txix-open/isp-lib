@@ -211,8 +211,8 @@ func (b *runner) initSocketConnection() etp.Client {
 	}
 
 	connectionReadLimit := defaultConnectionReadLimit
-	if socketConfig.ConnectionReadLimit > 0 {
-		connectionReadLimit = socketConfig.ConnectionReadLimit << 10
+	if socketConfig.ConnectionReadLimitKB > 0 {
+		connectionReadLimit = socketConfig.ConnectionReadLimitKB << 10
 	}
 	etpConfig := etp.Config{
 		HttpClient:          http.DefaultClient,
