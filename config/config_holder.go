@@ -100,17 +100,17 @@ func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface
 func InitRemoteConfig(configuration interface{}, remoteConfig []byte) interface{} {
 	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
 	if err != nil {
-		log.WithMetadata(log.Metadata{"config": remoteConfig}).
+		log.WithMetadata(log.Metadata{"config": string(remoteConfig)}).
 			Fatalf(stdcodes.ModuleOverrideRemoteConfigError, "could not override remote config via env: %v", err)
 		return nil
 	}
 
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
-	if err := json.Unmarshal([]byte(newRemoteConfig), newConfiguration); err != nil {
-		log.WithMetadata(log.Metadata{"data": remoteConfig}).
+	if err := json.Unmarshal(newRemoteConfig, newConfiguration); err != nil {
+		log.WithMetadata(log.Metadata{"data": string(remoteConfig)}).
 			Fatalf(stdcodes.ModuleInvalidRemoteConfig, "received invalid remote config: %v", err)
 	} else if err := validateConfig(newConfiguration); err != nil {
-		log.WithMetadata(log.Metadata{"config": remoteConfig}).
+		log.WithMetadata(log.Metadata{"config": string(remoteConfig)}).
 			Fatalf(stdcodes.ModuleInvalidRemoteConfig, "received invalid remote config: %v", err)
 	} else {
 		remoteConfigInstance = newConfiguration

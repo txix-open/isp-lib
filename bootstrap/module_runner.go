@@ -15,6 +15,7 @@ import (
 	"github.com/mohae/deepcopy"
 	"github.com/thecodeteam/goodbye"
 	"net/http"
+	"nhooyr.io/websocket"
 	"os"
 	"time"
 )
@@ -80,6 +81,7 @@ func (b *runner) run() {
 	for {
 		//if all conditions are true, put signal into channel and later in loop send MODULE:READY event to config-service
 		if !b.ready && remoteConfigReady && requiredModulesReady && routesReady {
+			b.ready = true
 			initChan <- struct{}{}
 		}
 
@@ -131,7 +133,6 @@ func (b *runner) run() {
 				b.connectedModules[e.module] = addrList
 			}
 		case <-initChan:
-			b.ready = true
 			if b.onModuleReady != nil {
 				b.onModuleReady()
 			}
@@ -204,7 +205,9 @@ func (b *runner) initSocketConnection() etp.Client {
 	}
 	client := etp.NewClient(etpConfig)
 	client.OnDisconnect(func(err error) {
-		log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service: %v", err)
+		if websocket.CloseStatus(err) != websocket.StatusNormalClosure && !errors.Is(err, context.Canceled) {
+			log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service: %v", err)
+		}
 		b.lastFailedConnectionTime = time.Now()
 		b.disconnectChan <- struct{}{}
 	})
