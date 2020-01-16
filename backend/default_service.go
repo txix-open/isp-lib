@@ -170,6 +170,7 @@ func (df *DefaultService) getStreamHandler(ctx context.Context) (*streamFunction
 	return &handler, md, nil
 }
 
+// Deprecated
 func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *DefaultService {
 	funcs, streams, err := resolveHandlers(methodPrefix, handlersStructs...)
 	if err != nil {
@@ -182,13 +183,26 @@ func GetDefaultService(methodPrefix string, handlersStructs ...interface{}) *Def
 	}
 }
 
-func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointConfig {
-	endpoints := make([]structure.EndpointConfig, 0)
+func NewDefaultService(descriptors []structure.EndpointDescriptor) *DefaultService {
+	funcs, streams, err := resolveHandlersByDescriptors(descriptors)
+	if err != nil {
+		panic(err)
+	}
+	return &DefaultService{
+		functions:       funcs,
+		streamConsumers: streams,
+		validator:       validate,
+	}
+}
+
+// Deprecated
+func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structure.EndpointDescriptor {
+	endpoints := make([]structure.EndpointDescriptor, 0)
 	for _, handlersStruct := range handlersStructs {
 		of := reflect.ValueOf(handlersStruct)
 		if of.Kind() == reflect.Map {
 			for k := range handlersStruct.(map[string]interface{}) {
-				endpoints = append(endpoints, structure.EndpointConfig{Path: k, Inner: false})
+				endpoints = append(endpoints, structure.EndpointDescriptor{Path: k, Inner: false})
 			}
 		} else {
 			t := of.Elem().Type()
@@ -204,7 +218,8 @@ func GetEndpoints(methodPrefix string, handlersStructs ...interface{}) []structu
 	return endpoints
 }
 
-func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.EndpointConfig {
+// Deprecated
+func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.EndpointDescriptor {
 	name, ok := f.Tag.Lookup("method")
 	if !ok {
 		name = f.Name
@@ -218,7 +233,7 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 	if ok && strings.ToLower(innerString) == "true" {
 		inner = true
 	}
-	return structure.EndpointConfig{Path: path.Join(methodPrefix, group, name), Inner: inner}
+	return structure.EndpointDescriptor{Path: path.Join(methodPrefix, group, name), Inner: inner}
 }
 
 func handleError(err error, method string) error {
@@ -275,6 +290,37 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	}
 	fun.fun = fValue
 	return fun, nil
+}
+
+func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (map[string]function, map[string]streamFunction, error) {
+	functions := make(map[string]function)
+	streamHandlers := make(map[string]streamFunction)
+
+	for _, descriptor := range descriptors {
+		value := reflect.ValueOf(descriptor.Handler)
+		if f, ok := descriptor.Handler.(streaming.StreamConsumer); ok {
+			if _, present := streamHandlers[descriptor.Path]; present {
+				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+			}
+			streamHandlers[descriptor.Path] = streamFunction{
+				methodName: descriptor.Path,
+				consume:    f,
+			}
+		} else {
+			f, err := getFunction(value.Type(), value)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if _, present := functions[descriptor.Path]; present {
+				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+			}
+			f.methodName = descriptor.Path
+			functions[descriptor.Path] = f
+		}
+	}
+
+	return functions, streamHandlers, nil
 }
 
 func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[string]function, map[string]streamFunction, error) {

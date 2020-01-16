@@ -129,12 +129,12 @@ func Fatalf(format string, args ...interface{}) {
 
 // Deprecated: use github.com/integration-system/isp-log
 func Panic(args ...interface{}) {
-	terminalLogger.Panicln(args)
+	terminalLogger.Panicln(args...)
 }
 
 // Deprecated: use github.com/integration-system/isp-log
 func Panicf(format string, args ...interface{}) {
-	terminalLogger.Panicf(format, args)
+	terminalLogger.Panicf(format, args...)
 }
 
 // Deprecated: use github.com/integration-system/isp-log

@@ -129,7 +129,6 @@ func OnConfigChange(f interface{}) {
 	rt := reflect.TypeOf(f)
 	if rt.Kind() != reflect.Func || rt.NumIn() != 2 {
 		panic(errInvalidFunc)
-		return
 	}
 
 	onChangeFunc = f
