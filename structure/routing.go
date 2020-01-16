@@ -3,6 +3,7 @@ package structure
 import (
 	"bytes"
 	"encoding/json"
+	"path"
 )
 
 type ModuleInfo struct {
@@ -14,17 +15,35 @@ type ModuleInfo struct {
 
 type RoutingConfig []BackendDeclaration
 
+// Deprecated: use EndpointDescriptor instead
 type EndpointConfig struct {
 	Path           string `valid:"required~Required" json:"path"`
 	Inner          bool   `json:"inner"`
 	IgnoreOnRouter bool   `json:"ignoreOnRouter"`
 }
 
+type EndpointDescriptor struct {
+	Path             string `valid:"required~Required" json:"path"`
+	Inner            bool   `json:"inner"`
+	UserAuthRequired bool
+	Extra            map[string]interface{}
+	Handler          interface{} `json:"-"`
+}
+
+func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []EndpointDescriptor {
+	for i, descriptor := range descriptors {
+		descriptor.Path = path.Join(prefix, descriptor.Path)
+		descriptors[i] = descriptor
+	}
+
+	return descriptors
+}
+
 type BackendDeclaration struct {
 	ModuleName string               `json:"moduleName"`
 	Version    string               `json:"version"`
 	LibVersion string               `json:"libVersion"`
-	Endpoints  []EndpointConfig     `json:"endpoints"`
+	Endpoints  []EndpointDescriptor `json:"endpoints"`
 	Address    AddressConfiguration `json:"address"`
 }
 
@@ -36,7 +55,7 @@ func (backedConfig *BackendDeclaration) IsAddressEquals(address AddressConfigura
 	return backedConfig.Address.IP == address.IP && backedConfig.Address.Port == address.Port
 }
 
-func (backedConfig *BackendDeclaration) IsPathsEqual(paths []EndpointConfig) bool {
+func (backedConfig *BackendDeclaration) IsPathsEqual(paths []EndpointDescriptor) bool {
 	newBytes, err := json.Marshal(paths)
 	if err != nil {
 		return false

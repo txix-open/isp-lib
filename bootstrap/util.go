@@ -71,7 +71,10 @@ func getOutboundIp() (string, error) {
 }
 
 func getModuleDeclaration(moduleInfo ModuleInfo) structure.BackendDeclaration {
-	endpoints := backend.GetEndpoints(moduleInfo.ModuleName, moduleInfo.Handlers...)
+	endpoints := moduleInfo.Endpoints
+	if moduleInfo.Endpoints == nil {
+		endpoints = backend.GetEndpoints(moduleInfo.ModuleName, moduleInfo.Handlers...)
+	}
 	addr := moduleInfo.GrpcOuterAddress.IP
 	hasSchema := strings.Contains(addr, "http://")
 	if hasSchema {
