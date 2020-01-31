@@ -3,6 +3,10 @@ package backend
 import (
 	"errors"
 	"fmt"
+	"path"
+	"reflect"
+	"strings"
+
 	proto "github.com/golang/protobuf/ptypes/struct"
 	"github.com/integration-system/isp-lib/proto/stubs"
 	"github.com/integration-system/isp-lib/streaming"
@@ -14,9 +18,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"path"
-	"reflect"
-	"strings"
 )
 
 type ErrorHandler func(err error) (interface{}, error)
@@ -280,6 +281,14 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	fun.mdParamNum = -1
 	for i := 0; i < inParamsCount; i++ {
 		param := fType.In(i)
+
+		switch param.Kind() {
+		case reflect.Func:
+			return fun, errors.New("unexpected func param: function")
+		case reflect.Interface:
+			return fun, errors.New("unexpected func param: interface")
+		}
+
 		if param.ConvertibleTo(metaDataType) {
 			fun.mdParamNum = i
 			fun.mdParamType = param
@@ -292,13 +301,24 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	return fun, nil
 }
 
+func getStreamConsumer(handler interface{}) streaming.StreamConsumer {
+	switch f := handler.(type) {
+	case func(streaming.DuplexMessageStream, metadata.MD) error:
+		return f
+	case streaming.StreamConsumer:
+		return f
+	default:
+		return nil
+	}
+}
+
 func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (map[string]function, map[string]streamFunction, error) {
 	functions := make(map[string]function)
 	streamHandlers := make(map[string]streamFunction)
 
 	for _, descriptor := range descriptors {
 		value := reflect.ValueOf(descriptor.Handler)
-		if f, ok := descriptor.Handler.(streaming.StreamConsumer); ok {
+		if f := getStreamConsumer(descriptor.Handler); f != nil {
 			if _, present := streamHandlers[descriptor.Path]; present {
 				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
 			}
@@ -309,7 +329,7 @@ func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (m
 		} else {
 			f, err := getFunction(value.Type(), value)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("invalid function for method %s: %v", descriptor.Path, err)
 			}
 
 			if _, present := functions[descriptor.Path]; present {
