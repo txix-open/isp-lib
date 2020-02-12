@@ -1,14 +1,15 @@
 package database
 
 import (
-	"github.com/go-pg/pg"
-	"github.com/integration-system/isp-lib/structure"
-	"github.com/integration-system/isp-lib/utils"
-	_ "github.com/lib/pq"
-	"github.com/pressly/goose"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/go-pg/pg/v9"
+	"github.com/integration-system/isp-lib/v2/structure"
+	"github.com/integration-system/isp-lib/v2/utils"
+	_ "github.com/lib/pq"
+	"github.com/pressly/goose"
 )
 
 const (

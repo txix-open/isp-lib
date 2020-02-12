@@ -2,8 +2,9 @@ package database
 
 import (
 	"errors"
-	"github.com/go-pg/pg"
 	"reflect"
+
+	"github.com/go-pg/pg/v9"
 )
 
 const (

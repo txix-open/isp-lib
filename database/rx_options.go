@@ -1,6 +1,6 @@
 package database
 
-import "github.com/go-pg/pg"
+import "github.com/go-pg/pg/v9"
 
 type Option func(rdc *RxDbClient)
 

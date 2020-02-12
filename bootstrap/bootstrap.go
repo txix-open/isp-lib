@@ -2,10 +2,11 @@ package bootstrap
 
 import (
 	"errors"
-	"github.com/integration-system/isp-lib/utils"
+	"reflect"
+
+	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/sirupsen/logrus"
-	"reflect"
 )
 
 const (

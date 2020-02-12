@@ -2,10 +2,11 @@ package metric
 
 import (
 	"fmt"
-	"github.com/integration-system/isp-lib/backend"
-	"github.com/rcrowley/go-metrics"
 	"sync"
 	"time"
+
+	"github.com/integration-system/isp-lib/v2/backend"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (

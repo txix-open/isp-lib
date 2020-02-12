@@ -1,13 +1,14 @@
 package schema
 
 import (
-	"github.com/asaskevich/govalidator"
-	"github.com/integration-system/isp-lib/utils"
-	"github.com/integration-system/jsonschema"
 	"reflect"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/integration-system/isp-lib/v2/utils"
+	"github.com/integration-system/jsonschema"
 )
 
 const (

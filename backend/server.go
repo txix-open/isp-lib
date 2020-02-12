@@ -2,14 +2,15 @@ package backend
 
 import (
 	"errors"
-	"github.com/integration-system/isp-lib/proto/stubs"
-	"github.com/integration-system/isp-lib/structure"
-	log "github.com/integration-system/isp-log"
-	"github.com/integration-system/isp-log/stdcodes"
-	"google.golang.org/grpc"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/structure"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
+	"google.golang.org/grpc"
 )
 
 var (

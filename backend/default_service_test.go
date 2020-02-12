@@ -3,8 +3,8 @@ package backend
 import (
 	"testing"
 
-	"github.com/integration-system/isp-lib/streaming"
-	"github.com/integration-system/isp-lib/structure"
+	"github.com/integration-system/isp-lib/v2/streaming"
+	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/metadata"
 )

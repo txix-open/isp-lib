@@ -3,9 +3,10 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"github.com/go-pg/pg"
-	"github.com/integration-system/isp-lib/structure"
 	"time"
+
+	"github.com/go-pg/pg/v9"
+	"github.com/integration-system/isp-lib/v2/structure"
 )
 
 func NewDbConnection(config structure.DBConfiguration) (*pg.DB, error) {

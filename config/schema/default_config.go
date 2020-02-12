@@ -2,9 +2,10 @@ package schema
 
 import (
 	"encoding/json"
-	"github.com/integration-system/isp-lib/utils"
 	"os"
 	p "path"
+
+	"github.com/integration-system/isp-lib/v2/utils"
 )
 
 func ExtractConfig(path string) (map[string]interface{}, error) {

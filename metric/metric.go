@@ -2,14 +2,15 @@ package metric
 
 import (
 	"encoding/json"
+	"sync"
+	"time"
+
 	"github.com/buaazp/fasthttprouter"
-	"github.com/integration-system/isp-lib/structure"
+	"github.com/integration-system/isp-lib/v2/structure"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/rcrowley/go-metrics"
 	"github.com/valyala/fasthttp"
-	"sync"
-	"time"
 )
 
 var (

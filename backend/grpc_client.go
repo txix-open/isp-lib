@@ -3,15 +3,16 @@ package backend
 import (
 	"encoding/json"
 	"errors"
-	"github.com/integration-system/isp-lib/proto/stubs"
-	"github.com/integration-system/isp-lib/streaming"
-	"github.com/integration-system/isp-lib/utils"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/streaming"
+	"github.com/integration-system/isp-lib/v2/utils"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 var (

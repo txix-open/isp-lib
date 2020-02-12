@@ -1,11 +1,12 @@
 package nats
 
 import (
-	"github.com/integration-system/go-cmp/cmp"
-	_ "github.com/integration-system/isp-lib/atomic"
-	"github.com/integration-system/isp-lib/structure"
-	"github.com/pkg/errors"
 	"sync"
+
+	"github.com/integration-system/go-cmp/cmp"
+	_ "github.com/integration-system/isp-lib/v2/atomic"
+	"github.com/integration-system/isp-lib/v2/structure"
+	"github.com/pkg/errors"
 )
 
 var (

@@ -2,9 +2,10 @@ package bootstrap
 
 import (
 	"context"
-	"github.com/integration-system/isp-lib/structure"
-	"github.com/integration-system/isp-lib/utils"
 	"os"
+
+	"github.com/integration-system/isp-lib/v2/structure"
+	"github.com/integration-system/isp-lib/v2/utils"
 )
 
 // contains information for config service announcement

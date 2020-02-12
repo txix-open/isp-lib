@@ -1,11 +1,12 @@
 package streaming
 
 import (
-	"github.com/integration-system/isp-lib/proto/stubs"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"io"
 	"os"
+
+	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (

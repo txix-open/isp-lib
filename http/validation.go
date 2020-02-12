@@ -1,9 +1,10 @@
 package http
 
 import (
-	"github.com/asaskevich/govalidator"
-	"github.com/integration-system/isp-lib/utils"
 	"net/http"
+
+	"github.com/asaskevich/govalidator"
+	"github.com/integration-system/isp-lib/v2/utils"
 )
 
 type ValidationErrors struct {

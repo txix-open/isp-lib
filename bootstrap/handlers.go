@@ -2,11 +2,12 @@ package bootstrap
 
 import (
 	"encoding/json"
-	"github.com/integration-system/isp-lib/structure"
-	"github.com/integration-system/isp-lib/utils"
+	"reflect"
+
+	"github.com/integration-system/isp-lib/v2/structure"
+	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
-	"reflect"
 )
 
 func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func([]byte) {

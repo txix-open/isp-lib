@@ -1,12 +1,13 @@
 package backend
 
 import (
-	isp "github.com/integration-system/isp-lib/proto/stubs"
-	"github.com/integration-system/isp-lib/streaming"
+	"reflect"
+
+	isp "github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/streaming"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"reflect"
 )
 
 type function struct {

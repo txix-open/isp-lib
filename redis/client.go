@@ -2,7 +2,7 @@ package redis
 
 import (
 	rd "github.com/go-redis/redis"
-	"github.com/integration-system/isp-lib/structure"
+	"github.com/integration-system/isp-lib/v2/structure"
 )
 
 type DB int

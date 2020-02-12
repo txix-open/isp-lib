@@ -1,12 +1,13 @@
 package backend
 
 import (
-	"github.com/integration-system/go-cmp/cmp"
-	"github.com/integration-system/isp-lib/structure"
-	"google.golang.org/grpc"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/integration-system/go-cmp/cmp"
+	"github.com/integration-system/isp-lib/v2/structure"
+	"google.golang.org/grpc"
 )
 
 type RxOption func(rc *RxGrpcClient)

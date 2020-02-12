@@ -1,12 +1,13 @@
 package streaming
 
 import (
-	"github.com/integration-system/isp-lib/proto/stubs"
-	"github.com/integration-system/isp-lib/utils"
+	"strconv"
+
+	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"strconv"
 )
 
 const endFileSeq = "end&"

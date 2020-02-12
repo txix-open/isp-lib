@@ -3,10 +3,11 @@ package database
 import (
 	"errors"
 	"fmt"
-	"github.com/go-pg/pg"
-	"github.com/integration-system/go-cmp/cmp"
-	"github.com/integration-system/isp-lib/structure"
 	"sync"
+
+	"github.com/go-pg/pg/v9"
+	"github.com/integration-system/go-cmp/cmp"
+	"github.com/integration-system/isp-lib/v2/structure"
 )
 
 var (

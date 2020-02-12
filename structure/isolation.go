@@ -1,7 +1,7 @@
 package structure
 
 import (
-	"github.com/integration-system/isp-lib/utils"
+	"github.com/integration-system/isp-lib/v2/utils"
 	"google.golang.org/grpc/metadata"
 )
 

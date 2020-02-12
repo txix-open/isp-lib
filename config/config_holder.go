@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/integration-system/isp-log"
-	"github.com/integration-system/isp-log/stdcodes"
 	"os"
 	"os/signal"
 	"path"
@@ -14,10 +12,13 @@ import (
 	"sync"
 	"syscall"
 
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
+
 	"github.com/asaskevich/govalidator"
 	"github.com/fsnotify/fsnotify"
 	"github.com/integration-system/bellows"
-	"github.com/integration-system/isp-lib/utils"
+	"github.com/integration-system/isp-lib/v2/utils"
 	"github.com/mohae/deepcopy"
 	"github.com/spf13/viper"
 )

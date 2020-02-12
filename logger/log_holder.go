@@ -3,11 +3,12 @@ package logger
 
 import (
 	"fmt"
-	"github.com/integration-system/isp-lib/utils"
-	"github.com/sirupsen/logrus"
-	"github.com/x-cray/logrus-prefixed-formatter"
 	"os"
 	"strings"
+
+	"github.com/integration-system/isp-lib/v2/utils"
+	"github.com/sirupsen/logrus"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 const (
