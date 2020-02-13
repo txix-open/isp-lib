@@ -76,7 +76,7 @@ func ensureMigrations(config structure.DBConfiguration) error {
 
 func withSchema(pdb *pg.DB, schema string) *pg.DB {
 	if pdb != nil {
-		return pdb.WithParam(SchemaParam, pg.F(schema))
+		return pdb.WithParam(SchemaParam, pg.Ident(schema))
 	}
 	return nil
 }
