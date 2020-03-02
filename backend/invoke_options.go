@@ -1,15 +1,18 @@
 package backend
 
 import (
-	"google.golang.org/grpc/metadata"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 type InvokeOption func(opts *invokeOpts)
 
 type invokeOpts struct {
-	md      metadata.MD
-	timeout time.Duration
+	md       metadata.MD
+	timeout  time.Duration
+	callOpts []grpc.CallOption
 }
 
 func WithTimeout(timeout time.Duration) InvokeOption {
@@ -21,6 +24,12 @@ func WithTimeout(timeout time.Duration) InvokeOption {
 func WithMetadata(md metadata.MD) InvokeOption {
 	return func(opts *invokeOpts) {
 		opts.md = md
+	}
+}
+
+func WithCallOptions(callOpts ...grpc.CallOption) InvokeOption {
+	return func(opts *invokeOpts) {
+		opts.callOpts = callOpts
 	}
 }
 

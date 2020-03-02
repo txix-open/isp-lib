@@ -7,9 +7,9 @@ require (
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-pg/pg/v9 v9.1.2
+	github.com/go-pg/pg/v9 v9.1.3
 	github.com/go-redis/redis v6.15.6+incompatible
-	github.com/golang/protobuf v1.3.3
+	github.com/golang/protobuf v1.3.4
 	github.com/grpc-ecosystem/grpc-gateway v1.13.0
 	github.com/integration-system/bellows v0.0.0-20190821124023-244325e8836c
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
@@ -35,7 +35,7 @@ require (
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
 	github.com/valyala/fasthttp v1.9.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	google.golang.org/genproto v0.0.0-20200211111953-2dc5924e3898
 	google.golang.org/grpc v1.27.1
 	nhooyr.io/websocket v1.7.4

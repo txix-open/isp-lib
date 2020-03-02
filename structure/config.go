@@ -3,6 +3,7 @@ package structure
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -25,7 +26,7 @@ type AddressConfiguration struct {
 }
 
 func (addressConfiguration *AddressConfiguration) GetAddress() string {
-	return addressConfiguration.IP + ":" + addressConfiguration.Port
+	return net.JoinHostPort(addressConfiguration.IP, addressConfiguration.Port)
 }
 
 type RedisConfiguration struct {
