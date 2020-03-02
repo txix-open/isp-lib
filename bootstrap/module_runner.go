@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"time"
 
 	etp "github.com/integration-system/isp-etp-go/client"
@@ -54,6 +55,7 @@ func (b *runner) run() {
 	defer func() {
 		err := recover()
 		if err != nil {
+			debug.PrintStack()
 			log.Fatalf(stdcodes.ModuleRunFatalError, "could not run module, fatal error occurred: %v", err)
 		}
 	}()
