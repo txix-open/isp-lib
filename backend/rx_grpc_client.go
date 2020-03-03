@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	defaultConnsPerAddress = 3
+	defaultConnsPerAddress = 1
 )
 
 type GrpcClient interface {
@@ -46,7 +46,7 @@ func (rc *RxGrpcClient) ReceiveAddressList(list []structure.AddressConfiguration
 		return true
 	}
 
-	var resolvedAddrs []resolver.Address
+	resolvedAddrs := make([]resolver.Address, 0, len(list)*rc.connsPerAddress)
 	for j := 1; j < rc.connsPerAddress+1; j++ {
 		for i := 0; i < len(list); i++ {
 			addr := list[i].GetAddress()
