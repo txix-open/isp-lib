@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	proto "github.com/golang/protobuf/ptypes/struct"
@@ -51,6 +52,7 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	defer func() {
 		err := recover()
 		if err != nil {
+			debug.PrintStack()
 			log.WithMetadata(log.Metadata{"method": c.method}).
 				Error(stdcodes.ModuleInternalGrpcServiceError, err)
 		}
