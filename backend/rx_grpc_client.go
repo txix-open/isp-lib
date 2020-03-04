@@ -6,12 +6,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/integration-system/isp-lib/v2/proto/stubs"
 	"github.com/integration-system/isp-lib/v2/utils"
 	"google.golang.org/grpc/balancer/roundrobin"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/resolver/manual"
+	"google.golang.org/grpc/status"
 
 	"github.com/integration-system/isp-lib/v2/streaming"
 	"github.com/integration-system/isp-lib/v2/structure"
@@ -80,7 +83,11 @@ func (rc *RxGrpcClient) Invoke(method string, callerId int, requestBody, respons
 		return err
 	}
 
-	res, err := rc.ispConn.Request(ctx, msg, options.callOpts...)
+	var res *isp.Message
+	err = retryUnavailable(func() (err error) {
+		res, err = rc.ispConn.Request(ctx, msg, options.callOpts...)
+		return
+	})
 	if err != nil {
 		return err
 	}
@@ -102,7 +109,11 @@ func (rc *RxGrpcClient) InvokeStream(method string, callerId int, consumer strea
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 
-	streamClient, err := rc.ispConn.RequestStream(ctx)
+	var streamClient isp.BackendService_RequestStreamClient
+	err := retryUnavailable(func() (err error) {
+		streamClient, err = rc.ispConn.RequestStream(ctx)
+		return
+	})
 	if err != nil {
 		return err
 	}
@@ -116,6 +127,26 @@ func (rc *RxGrpcClient) Conn() isp.BackendServiceClient {
 
 func (rc *RxGrpcClient) Close() error {
 	return rc.conn.Close()
+}
+
+func retryUnavailable(f func() error) error {
+	bf := backoff.WithMaxRetries(new(backoff.ZeroBackOff), 2)
+	var responseErr error
+	err := backoff.Retry(func() error {
+		err := f()
+		switch status.Code(err) {
+		case codes.Unavailable:
+			return err
+		default:
+			responseErr = err
+			return nil
+		}
+	}, bf)
+
+	if responseErr != nil {
+		return responseErr
+	}
+	return err
 }
 
 // NewRxGrpcClient is incompatible with grpc.WithBlock() option

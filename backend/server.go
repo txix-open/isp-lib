@@ -14,14 +14,46 @@ import (
 )
 
 var (
-	grpcAddress *structure.AddressConfiguration
-	server      *GrpcServer
-	lock        = sync.Mutex{}
+	server *GrpcServer
+	lock   = sync.Mutex{}
 )
+
+func newBackendGrpcServer(listener net.Listener, service *DefaultService, opt ...grpc.ServerOption) *GrpcServer {
+	grpcServer := grpc.NewServer(opt...)
+	isp.RegisterBackendServiceServer(grpcServer, service)
+	srv := &GrpcServer{
+		Server:   grpcServer,
+		service:  service,
+		listener: listener,
+	}
+
+	return srv
+}
 
 type GrpcServer struct {
 	*grpc.Server
-	service *DefaultService
+	listener net.Listener
+	service  *DefaultService
+}
+
+func (s *GrpcServer) Start() {
+	log.Infof(stdcodes.ModuleGrpcServiceStart, "start grpc service on %s", s.listener.Addr().String())
+	if err := s.Serve(s.listener); err != nil && err != grpc.ErrServerStopped {
+		log.Fatalf(stdcodes.ModuleGrpcServiceStartError, "grpc serve: %v", err)
+	} else {
+		log.Infof(stdcodes.ModuleGrpcServiceManualShutdown, "shutdown grpc service on %s", s.listener.Addr().String())
+	}
+}
+
+func (s *GrpcServer) UpdateHandlers(methodPrefix string, handlersStructs ...interface{}) error {
+	funcs, streams, err := resolveHandlers(methodPrefix, handlersStructs...)
+	if err != nil {
+		return err
+	}
+	s.service.functions = funcs
+	s.service.streamConsumers = streams
+
+	return nil
 }
 
 func StartBackendGrpcServer(addr structure.AddressConfiguration, service *DefaultService, opt ...grpc.ServerOption) {
@@ -29,37 +61,30 @@ func StartBackendGrpcServer(addr structure.AddressConfiguration, service *Defaul
 	defer lock.Unlock()
 
 	if server != nil {
-		log.Fatalf(stdcodes.ModuleGrpcServiceStartError, "grpc service has already started on %v", grpcAddress.GetAddress())
-		return
+		log.Fatalf(stdcodes.ModuleGrpcServiceStartError, "grpc service has already started on %v", addr.GetAddress())
 	}
-
-	grpcAddress = &addr
 
 	var ln net.Listener
 	var err error
-	for ln, err = net.Listen("tcp", grpcAddress.GetAddress()); err != nil; {
-		log.Errorf(stdcodes.ModuleGrpcServiceStartError, "open grpc port: %v, err: %v, retry after 3 second...", grpcAddress, err)
+	for ln, err = net.Listen("tcp", addr.GetAddress()); err != nil; {
+		log.Errorf(stdcodes.ModuleGrpcServiceStartError, "open grpc port: %s, err: %v, retry after 3 second...", addr.GetAddress(), err)
 		time.Sleep(time.Second * 3)
 	}
 
-	StartBackendGrpcServerOn(addr, ln, service, opt...)
+	server = newBackendGrpcServer(ln, service, opt...)
+	go server.Start()
 }
 
 func StartBackendGrpcServerOn(addr structure.AddressConfiguration, ln net.Listener, service *DefaultService, opt ...grpc.ServerOption) {
-	grpcAddress = &addr
+	lock.Lock()
+	defer lock.Unlock()
 
-	grpcServer := grpc.NewServer(opt...)
-	isp.RegisterBackendServiceServer(grpcServer, service)
-	server = &GrpcServer{grpcServer, service}
+	if server != nil {
+		log.Fatalf(stdcodes.ModuleGrpcServiceStartError, "grpc service has already started on %v", addr.GetAddress())
+	}
 
-	go func() {
-		log.Infof(stdcodes.ModuleGrpcServiceStart, "start grpc service on %v", grpcAddress.GetAddress())
-		if err := server.Serve(ln); err != nil {
-			log.Fatal(stdcodes.ModuleGrpcServiceStartError, err)
-		} else {
-			log.Infof(stdcodes.ModuleGrpcServiceManualShutdown, "shutdown grpc service on %v", grpcAddress.GetAddress())
-		}
-	}()
+	server = newBackendGrpcServer(ln, service, opt...)
+	go server.Start()
 }
 
 func StopGrpcServer() {
@@ -77,16 +102,10 @@ func UpdateHandlers(methodPrefix string, handlersStructs ...interface{}) error {
 	defer lock.Unlock()
 
 	if server != nil {
-		funcs, streams, err := resolveHandlers(methodPrefix, handlersStructs...)
-		if err != nil {
-			return err
-		}
-		server.service.functions = funcs
-		server.service.streamConsumers = streams
-		return nil
-	} else {
-		return errors.New("grpc server not initialized")
+		return server.UpdateHandlers(methodPrefix, handlersStructs)
 	}
+
+	return errors.New("grpc server not initialized")
 }
 
 func ServerIsInitialized() bool {
@@ -94,14 +113,4 @@ func ServerIsInitialized() bool {
 	defer lock.Unlock()
 
 	return server != nil
-}
-
-func checkPortIsFree(port string) bool {
-	ln, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		return false
-	} else {
-		ln.Close()
-		return true
-	}
 }
