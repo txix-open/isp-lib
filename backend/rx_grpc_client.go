@@ -23,6 +23,8 @@ import (
 
 const (
 	defaultConnsPerAddress = 1
+	resolverScheme         = "isp"
+	resolverUrl            = resolverScheme + ":///"
 )
 
 type GrpcClient interface {
@@ -151,35 +153,30 @@ func retryUnavailable(f func() error) error {
 
 // NewRxGrpcClient is incompatible with grpc.WithBlock() option
 func NewRxGrpcClient(opts ...RxOption) *RxGrpcClient {
-	rxGrpcClient := &RxGrpcClient{}
+	client := &RxGrpcClient{}
 	for _, o := range opts {
-		o(rxGrpcClient)
+		o(client)
 	}
-	if rxGrpcClient.connsPerAddress <= 0 {
-		rxGrpcClient.connsPerAddress = defaultConnsPerAddress
+	if client.connsPerAddress <= 0 {
+		client.connsPerAddress = defaultConnsPerAddress
 	}
 
-	manualResolver, cleanup := manual.GenerateAndRegisterManualResolver()
-	// unregister global resolver because we use resolver locally
-	defer cleanup()
-	rxGrpcClient.resolver = manualResolver
-
-	dialOpts := append(rxGrpcClient.options,
+	client.resolver = manual.NewBuilderWithScheme(resolverScheme)
+	dialOpts := append(client.options,
 		grpc.WithBalancerName(roundrobin.Name),
-		grpc.WithResolvers(manualResolver),
+		grpc.WithResolvers(client.resolver),
 	)
-	serverAddr := manualResolver.Scheme() + ":///"
-	conn, err := grpc.Dial(serverAddr, dialOpts...)
+	conn, err := grpc.Dial(resolverUrl, dialOpts...)
 
 	// only if invalid options
 	if err != nil {
 		panic(err)
 	}
 
-	rxGrpcClient.conn = conn
-	rxGrpcClient.ispConn = isp.NewBackendServiceClient(conn)
+	client.conn = conn
+	client.ispConn = isp.NewBackendServiceClient(conn)
 
-	return rxGrpcClient
+	return client
 }
 
 type RxOption func(rc *RxGrpcClient)
