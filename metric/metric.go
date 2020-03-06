@@ -25,7 +25,7 @@ var (
 const (
 	defaultCollectingPeriod = 10
 	defaultIpAddress        = "0.0.0.0"
-	defaultPath             = "/metrics"
+	defaultMetricPath       = "/metrics"
 )
 
 func init() {
@@ -47,7 +47,7 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 	}
 	metricPath := metricConfig.Address.Path
 	if metricPath == "" {
-		metricPath = defaultPath
+		metricPath = defaultMetricPath
 	}
 	metricIp := metricConfig.Address.IP
 	if metricIp == "" {
@@ -58,6 +58,9 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 		router.GET(metricPath, handleMetricRequest)
 		lastMetricPath = metricPath
 	}
+
+	router.GET(startProfilingPath, handleEnableProfilingRequest)
+	router.GET(stopProfilingPath, handleDisableProfilingRequest)
 
 	lock.Lock()
 	if metricServer != nil {
@@ -151,6 +154,7 @@ func handleMetricRequest(ctx *fasthttp.RequestCtx) {
 		allMetrics["status"] = statuses
 	}
 	bytes, _ := json.Marshal(allMetrics)
+	ctx.SetContentType("application/json")
 	ctx.SetBody(bytes)
 	ctx.SetStatusCode(fasthttp.StatusOK)
 }
