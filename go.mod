@@ -14,12 +14,11 @@ require (
 	github.com/integration-system/bellows v0.0.0-20190821124023-244325e8836c
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
 	github.com/integration-system/gowsdl v1.0.0
-	github.com/integration-system/isp-etp-go v2.0.2+incompatible
-	github.com/integration-system/isp-log v1.0.0
+	github.com/integration-system/isp-etp-go/v2 v2.1.0
+	github.com/integration-system/isp-log v1.1.2
 	github.com/integration-system/jsonschema v1.0.0
 	github.com/json-iterator/go v1.1.9
 	github.com/lib/pq v1.3.0
-	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/modern-go/reflect2 v1.0.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
