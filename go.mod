@@ -19,7 +19,6 @@ require (
 	github.com/integration-system/jsonschema v1.0.0
 	github.com/json-iterator/go v1.1.9
 	github.com/lib/pq v1.3.0
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/modern-go/reflect2 v1.0.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/nats-io/nats-streaming-server v0.17.0 // indirect
@@ -34,7 +33,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
 	github.com/valyala/fasthttp v1.9.0
-	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	google.golang.org/genproto v0.0.0-20200211111953-2dc5924e3898
 	google.golang.org/grpc v1.27.1
