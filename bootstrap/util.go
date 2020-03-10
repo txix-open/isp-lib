@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	etp "github.com/integration-system/isp-etp-go/client"
+	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/backend"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"

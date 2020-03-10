@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	etp "github.com/integration-system/isp-etp-go/client"
+	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/config"
 	"github.com/integration-system/isp-lib/v2/config/schema"
 	"github.com/integration-system/isp-lib/v2/metric"
@@ -26,6 +26,8 @@ const (
 	defaultConfigServiceConnectionTimeout       = 400 * time.Millisecond
 	defaultRemoteConfigAwaitTimeout             = 3 * time.Second
 	defaultMaxAckRetryTimeout                   = 10 * time.Second
+	heartbeatInterval                           = 1 * time.Second
+	heartbeatTimeout                            = 1 * time.Second
 	defaultConnectionReadLimit            int64 = 4 << 20 // 4 MB
 )
 
@@ -81,6 +83,8 @@ func (b *runner) run() {
 	remoteConfigTimeoutChan := time.After(defaultRemoteConfigAwaitTimeout) //used for log WARN message
 	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
 	initChan := make(chan struct{}, 1)
+	heartbeatCh := time.NewTicker(heartbeatInterval)
+
 	//in main goroutine handle all asynchronous events from config service
 	for {
 		//if all conditions are true, put signal into channel and later in loop send MODULE:READY event to config-service
@@ -141,6 +145,17 @@ func (b *runner) run() {
 				b.onModuleReady()
 			}
 			go b.sendModuleReady()
+		case <-heartbeatCh.C:
+			if b.client == nil {
+				continue
+			}
+
+			ctx, cancel := context.WithTimeout(b.ctx, heartbeatTimeout)
+			err := b.client.Ping(ctx)
+			if err != nil {
+				log.Warnf(stdcodes.ConfigServiceDisconnection, "failed to heartbeat config service: %v", err)
+			}
+			cancel()
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.ready = false
 			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
@@ -159,7 +174,6 @@ func (b *runner) run() {
 		case <-b.ctx.Done(): //return from main goroutine after shutdown signal
 			return
 		}
-
 	}
 }
 
@@ -213,6 +227,8 @@ func (b *runner) initSocketConnection() etp.Client {
 		b.connStrings = NewRoundRobinStrings(connectionStrings)
 	}
 
+	configAddress := b.connStrings.Get()
+
 	connectionReadLimit := defaultConnectionReadLimit
 	if socketConfig.ConnectionReadLimitKB > 0 {
 		connectionReadLimit = socketConfig.ConnectionReadLimitKB << 10
@@ -224,10 +240,14 @@ func (b *runner) initSocketConnection() etp.Client {
 	client := etp.NewClient(etpConfig)
 	client.OnDisconnect(func(err error) {
 		if websocket.CloseStatus(err) != websocket.StatusNormalClosure && !errors.Is(err, context.Canceled) {
-			log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service: %v", err)
+			log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service %s: %v", configAddress, err)
 		}
 		b.lastFailedConnectionTime = time.Now()
 		b.disconnectChan <- struct{}{}
+	})
+
+	client.OnConnect(func() {
+		log.Infof(stdcodes.ConfigServiceConnection, "connected to config service %s", configAddress)
 	})
 
 	if b.onSocketErrorReceive != nil {
@@ -251,7 +271,7 @@ func (b *runner) initSocketConnection() etp.Client {
 		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(module, b.connectEventChan)))
 	}
 
-	err := client.Dial(b.ctx, b.connStrings.Get())
+	err := client.Dial(b.ctx, configAddress)
 	for err != nil {
 		log.Errorf(stdcodes.ConfigServiceConnectionError, "could not connect to config service: %v", err)
 		b.lastFailedConnectionTime = time.Now()
