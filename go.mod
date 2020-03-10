@@ -27,10 +27,11 @@ require (
 	github.com/nats-io/stan.go v0.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose v2.6.0+incompatible
+	github.com/profefe/profefe v0.0.0-20200307211836-5ab457f7a4d8
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.4.0
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
 	github.com/valyala/fasthttp v1.9.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
