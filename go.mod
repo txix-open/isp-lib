@@ -35,6 +35,6 @@ require (
 	github.com/valyala/fasthttp v1.9.0
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
 	google.golang.org/genproto v0.0.0-20200211111953-2dc5924e3898
-	google.golang.org/grpc v1.27.1
+	google.golang.org/grpc v1.28.0
 	nhooyr.io/websocket v1.7.4
 )
