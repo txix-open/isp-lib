@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-pg/pg/v9"
 	log "github.com/integration-system/isp-log"
@@ -21,10 +22,13 @@ func (hook logQueryHook) BeforeQuery(ctx context.Context, _ *pg.QueryEvent) (con
 }
 
 func (hook logQueryHook) AfterQuery(_ context.Context, q *pg.QueryEvent) error {
+	m := log.WithMetadata(map[string]interface{}{
+		"elapsed_time": time.Since(q.StartTime),
+	})
 	if query, err := q.FormattedQuery(); err != nil {
-		log.Log(hook.level, debugQueryCode, err)
+		m.Log(hook.level, debugQueryCode, err)
 	} else {
-		log.Log(hook.level, debugQueryCode, query)
+		m.Log(hook.level, debugQueryCode, query)
 	}
 	return nil
 }
