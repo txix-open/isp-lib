@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	router         = fasthttprouter.New()
-	lastMetricPath = ""
 	statusCheckers = make(map[string]func() interface{}, 0)
 	registry       metrics.Registry
 	metricServer   *fasthttp.Server
@@ -54,34 +52,27 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 		metricIp = defaultIpAddress
 	}
 
-	if lastMetricPath != metricPath {
-		router.GET(metricPath, handleMetricRequest)
-		lastMetricPath = metricPath
-	}
+	router := fasthttprouter.New()
+	router.GET(metricPath, handleMetricRequest)
 
 	router.GET(startProfilingPath, handleEnableProfilingRequest)
 	router.GET(stopProfilingPath, handleDisableProfilingRequest)
 
 	lock.Lock()
+	newMetricServer := &fasthttp.Server{
+		Handler:      router.Handler,
+		WriteTimeout: time.Second * 60,
+		ReadTimeout:  time.Second * 60,
+	}
+
 	if metricServer != nil {
 		_ = metricServer.Shutdown()
-		metricServer = nil
 	}
+	metricServer = newMetricServer
 	lock.Unlock()
 
 	go func() {
-		lock.Lock()
-		if metricServer != nil {
-			return
-		}
-		metricServer = &fasthttp.Server{
-			Handler:      router.Handler,
-			WriteTimeout: time.Second * 60,
-			ReadTimeout:  time.Second * 60,
-		}
-		lock.Unlock()
-
-		err := metricServer.ListenAndServe(metricIp + ":" + metricPort)
+		err := newMetricServer.ListenAndServe(metricIp + ":" + metricPort)
 		if err != nil {
 			log.Errorf(stdcodes.ModuleMetricServiceError, "could not start metric service: %v", err)
 		}
@@ -137,10 +128,6 @@ func RemoveStatusChecker(name string) {
 
 func RemoveAllStatusChecker() {
 	statusCheckers = make(map[string]func() interface{}, 0)
-}
-
-func GerHttpRouter() *fasthttprouter.Router {
-	return router
 }
 
 func handleMetricRequest(ctx *fasthttp.RequestCtx) {
