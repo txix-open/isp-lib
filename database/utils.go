@@ -1,13 +1,16 @@
 package database
 
 import (
+	"io"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/go-pg/pg/v9"
+	"github.com/go-pg/pg/v9/pgjson"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
+	jsoniter "github.com/json-iterator/go"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose"
 )
@@ -15,6 +18,33 @@ import (
 const (
 	SchemaParam = "db_schema"
 )
+
+var json = jsoniter.ConfigFastest
+
+func init() {
+	pgjson.SetProvider(JsoniterProvider{})
+}
+
+var _ pgjson.Provider = (*JsoniterProvider)(nil)
+
+type JsoniterProvider struct {
+}
+
+func (s JsoniterProvider) Marshal(v interface{}) ([]byte, error) {
+	return json.Marshal(v)
+}
+
+func (s JsoniterProvider) Unmarshal(data []byte, v interface{}) error {
+	return json.Unmarshal(data, v)
+}
+
+func (s JsoniterProvider) NewEncoder(w io.Writer) pgjson.Encoder {
+	return json.NewEncoder(w)
+}
+
+func (s JsoniterProvider) NewDecoder(r io.Reader) pgjson.Decoder {
+	return json.NewDecoder(r)
+}
 
 func ResolveMigrationsDirectory() string {
 	ex, _ := os.Executable()

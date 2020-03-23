@@ -7,7 +7,7 @@ require (
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/fsnotify/fsnotify v1.4.7
-	github.com/go-pg/pg/v9 v9.1.3
+	github.com/go-pg/pg/v9 v9.1.4
 	github.com/go-redis/redis v6.15.6+incompatible
 	github.com/golang/protobuf v1.3.4
 	github.com/grpc-ecosystem/grpc-gateway v1.13.0
