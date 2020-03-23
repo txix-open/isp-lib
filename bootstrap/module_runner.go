@@ -270,6 +270,7 @@ func (b *runner) initSocketConnection() etp.Client {
 		event := utils.ModuleConnected(module)
 		client.On(event, UnmarshalAddressListAndThen(event, makeAddressListConsumer(module, b.connectEventChan)))
 	}
+	client.OnDefault(b.handleArbitraryEvent)
 
 	err := client.Dial(b.ctx, configAddress)
 	for err != nil {

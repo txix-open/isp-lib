@@ -71,3 +71,10 @@ func handleRoutes(routesChan chan structure.RoutingConfig, event string) func([]
 		}
 	}
 }
+
+func (b *runner) handleArbitraryEvent(event string, data []byte) {
+	f := b.subscribedEvents[event]
+	if f != nil {
+		f(data)
+	}
+}

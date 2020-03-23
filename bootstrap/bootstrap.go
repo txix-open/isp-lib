@@ -40,6 +40,7 @@ type bootstrapConfiguration struct {
 	requiredModules map[string]*connectConsumer
 	// module name -> addresses
 	connectedModules map[string][]string
+	subscribedEvents map[string]func([]byte)
 
 	makeSocketConfig   socketConfigProducer
 	makeModuleInfo     moduleInfoProducer
@@ -146,6 +147,13 @@ func (cfg *bootstrapConfiguration) DefaultRemoteConfigPath(path string) *bootstr
 	return cfg
 }
 
+// subscribe to event published from config service
+// note: data slice is reused, so for async handling or storing, data must be copied
+func (cfg *bootstrapConfiguration) SubscribeBroadcastEvent(event string, f func(data []byte)) *bootstrapConfiguration {
+	cfg.subscribedEvents[event] = f
+	return cfg
+}
+
 // callback fires every time before MODULE:READY send to config service
 func (cfg *bootstrapConfiguration) OnModuleReady(f func()) *bootstrapConfiguration {
 	cfg.onModuleReady = f
@@ -172,6 +180,7 @@ func ServiceBootstrap(localConfigPtr, remoteConfigPtr interface{}) *bootstrapCon
 		localConfigType:  reflect.TypeOf(localConfigPtr).String(),
 		requiredModules:  make(map[string]*connectConsumer),
 		connectedModules: make(map[string][]string),
+		subscribedEvents: make(map[string]func([]byte)),
 	}
 	if remoteConfigPtr != nil {
 		b.remoteConfigPtr = remoteConfigPtr
