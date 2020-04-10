@@ -1,7 +1,7 @@
 package redis
 
 import (
-	rd "github.com/go-redis/redis"
+	rd "github.com/go-redis/redis/v7"
 	"github.com/integration-system/isp-lib/v2/structure"
 )
 
