@@ -222,9 +222,6 @@ func overrideConfigurationFromEnv(src []byte, envPrefix string) ([]byte, error) 
 		return src, nil
 	}
 
-	marshal, _ := json.Marshal(overrides)
-	fmt.Println("11111111", string(marshal))
-
 	m := make(map[string]interface{})
 	err := json.Unmarshal(src, &m)
 	if err != nil {
@@ -245,16 +242,11 @@ func overrideConfigurationFromEnv(src []byte, envPrefix string) ([]byte, error) 
 		}
 	}
 
-	marshal, _ = json.Marshal(flattenMap)
-	fmt.Println("22222222", string(marshal))
-
 	expandedMap := bellows.Expand(flattenMap)
 	bytes, err := json.Marshal(expandedMap)
 	if err != nil {
 		return nil, fmt.Errorf("marhal to json: %v", err)
 	}
-
-	fmt.Println("33333333", string(bytes))
 
 	return bytes, nil
 }
