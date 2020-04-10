@@ -10,25 +10,26 @@ import (
 func TestRemoteConfigOverride(t *testing.T) {
 	assert := assert.New(t)
 
+	type Anon struct {
+		V string
+	}
+
+	type Inner struct {
+		CamelCase string
+		B         string
+		Anon
+	}
+
 	type Config struct {
 		A string
 		B int
 		C bool
-		D struct {
-			CamelCase string
-			B         string
-		}
+		D Inner
 	}
 
-	original := Config{A: "test1", B: 1, C: true, D: struct {
-		CamelCase string
-		B         string
-	}{CamelCase: "test1", B: "test2"}}
+	original := Config{A: "test1", B: 1, C: true, D: Inner{CamelCase: "test1", B: "test2", Anon: Anon{V: "test4"}}}
 
-	expect := Config{A: "test2", B: 2, C: false, D: struct {
-		CamelCase string
-		B         string
-	}{CamelCase: "test2", B: "test2"}}
+	expect := Config{A: "test2", B: 2, C: false, D: Inner{CamelCase: "test2", B: "test2", Anon: Anon{V: "test5"}}}
 
 	bytes, err := json.Marshal(original)
 	if err != nil {
@@ -39,6 +40,7 @@ func TestRemoteConfigOverride(t *testing.T) {
 	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_B", "2#{int}"))
 	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_C", "false#{bool}"))
 	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_D.CAMELCASE", "test2#{string}"))
+	assert.Nil(os.Setenv(RemoteConfigEnvPrefix+"_D.V", "test5#{string}"))
 
 	ptr := InitRemoteConfig(&original, bytes).(*Config)
 	original = *ptr
