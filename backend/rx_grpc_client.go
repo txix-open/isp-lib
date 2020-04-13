@@ -76,7 +76,7 @@ func (rc *RxGrpcClient) Invoke(method string, callerId int, requestBody, respons
 	md.Set(utils.ProxyMethodNameHeader, method)
 	md.Set(utils.ApplicationIdHeader, strconv.Itoa(callerId))
 
-	ctx, cancel := context.WithTimeout(context.Background(), options.timeout)
+	ctx, cancel := context.WithTimeout(options.ctx, options.timeout)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 
