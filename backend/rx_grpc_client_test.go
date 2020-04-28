@@ -13,6 +13,8 @@ import (
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -69,6 +71,33 @@ func TestNewRxGrpcClient_HandleUnavailableErrors(t *testing.T) {
 
 	answersMap := makeRequests(cli, requestsCount)
 	assert.Equal(t, 0, answersMap[droppedAnswer])
+}
+
+func TestNewRxGrpcClient_HandleShutdown(t *testing.T) {
+	cli := NewRxGrpcClient(
+		WithDialOptions(
+			grpc.WithInsecure(),
+		),
+	)
+
+	addrs, servers := setupServers(1)
+	cli.ReceiveAddressList(addrs)
+
+	finishCh := make(chan error)
+	go func() {
+		servers[0].Stop()
+		var answer string
+		err := cli.Invoke(methodPath, 1, nil, &answer)
+		finishCh <- err
+	}()
+
+	select {
+	case <-time.After(50 * time.Millisecond):
+		assert.Fail(t, "unexpected hang")
+	case err := <-finishCh:
+		code := status.Code(err)
+		assert.Equal(t, codes.Unavailable, code)
+	}
 }
 
 func makeRequests(cli *RxGrpcClient, requestsCount int) map[string]int {
