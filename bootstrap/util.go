@@ -15,7 +15,6 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	etp "github.com/integration-system/isp-etp-go/v2/client"
-	"github.com/integration-system/isp-lib/v2/backend"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
 	"github.com/integration-system/isp-log"
@@ -69,36 +68,6 @@ func getOutboundIp() (string, error) {
 	defer conn.Close()
 
 	return conn.LocalAddr().(*net.UDPAddr).IP.To4().String(), nil
-}
-
-func getModuleDeclaration(moduleInfo ModuleInfo) structure.BackendDeclaration {
-	endpoints := moduleInfo.Endpoints
-	if moduleInfo.Endpoints == nil {
-		endpoints = backend.GetEndpoints(moduleInfo.ModuleName, moduleInfo.Handlers...)
-	}
-	addr := moduleInfo.GrpcOuterAddress.IP
-	hasSchema := strings.Contains(addr, "http://")
-	if hasSchema {
-		addr = strings.Replace(addr, "http://", "", -1)
-	}
-	if addr == "" {
-		ip, err := getOutboundIp()
-		if err != nil {
-			panic(err)
-		} else {
-			if hasSchema {
-				ip = fmt.Sprintf("http://%s", ip)
-			}
-			moduleInfo.GrpcOuterAddress.IP = ip
-		}
-	}
-	return structure.BackendDeclaration{
-		ModuleName: moduleInfo.ModuleName,
-		Version:    moduleInfo.ModuleVersion,
-		Address:    moduleInfo.GrpcOuterAddress,
-		LibVersion: LibraryVersion,
-		Endpoints:  endpoints,
-	}
 }
 
 func getWsUrl(host string, port int, secure bool, params map[string]string) string {

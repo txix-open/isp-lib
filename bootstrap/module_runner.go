@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"sort"
+	"strings"
 	"time"
 
 	etp "github.com/integration-system/isp-etp-go/v2/client"
+	"github.com/integration-system/isp-lib/v2/backend"
 	"github.com/integration-system/isp-lib/v2/config"
 	"github.com/integration-system/isp-lib/v2/config/schema"
 	"github.com/integration-system/isp-lib/v2/metric"
@@ -47,6 +50,16 @@ type runner struct {
 	lastFailedConnectionTime time.Time
 
 	ctx context.Context
+}
+
+func makeRunner(cfg bootstrapConfiguration) *runner {
+	return &runner{
+		bootstrapConfiguration: cfg,
+		remoteConfigChan:       make(chan []byte),
+		connectEventChan:       make(chan connectEvent),
+		routesChan:             make(chan structure.RoutingConfig),
+		disconnectChan:         make(chan struct{}),
+	}
 }
 
 func (b *runner) run() {
@@ -345,7 +358,7 @@ func (b *runner) sendModuleRequirements() {
 func (b *runner) sendModuleDeclaration(eventType string) {
 	b.moduleInfo = b.makeModuleInfo(b.localConfigPtr)
 
-	declaration := getModuleDeclaration(b.moduleInfo)
+	declaration := b.getModuleDeclaration()
 
 	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
 	if ok, bytes, res := ackEvent(b.client, eventType, declaration, bf); ok {
@@ -390,12 +403,47 @@ func (b *runner) initialState() (remoteConfigReady, requiredModulesReady, routes
 	return
 }
 
-func makeRunner(cfg bootstrapConfiguration) *runner {
-	return &runner{
-		bootstrapConfiguration: cfg,
-		remoteConfigChan:       make(chan []byte),
-		connectEventChan:       make(chan connectEvent),
-		routesChan:             make(chan structure.RoutingConfig),
-		disconnectChan:         make(chan struct{}),
+func (b *runner) getModuleDeclaration() structure.BackendDeclaration {
+	moduleInfo := b.moduleInfo
+	endpoints := moduleInfo.Endpoints
+	if moduleInfo.Endpoints == nil {
+		endpoints = backend.GetEndpoints(moduleInfo.ModuleName, moduleInfo.Handlers...)
+	}
+	addr := moduleInfo.GrpcOuterAddress.IP
+	hasSchema := strings.Contains(addr, "http://")
+	if hasSchema {
+		addr = strings.Replace(addr, "http://", "", -1)
+	}
+	if addr == "" {
+		ip, err := getOutboundIp()
+		if err != nil {
+			panic(err)
+		}
+		if hasSchema {
+			ip = fmt.Sprintf("http://%s", ip)
+		}
+		moduleInfo.GrpcOuterAddress.IP = ip
+	}
+
+	requiredModules := make([]structure.ModuleDependency, 0, len(b.requiredModules))
+
+	for module, cfg := range b.requiredModules {
+		requiredModules = append(requiredModules, structure.ModuleDependency{
+			Name:     module,
+			Required: cfg.mustConnect,
+		})
+	}
+
+	sort.Slice(requiredModules, func(i, j int) bool {
+		return requiredModules[i].Name < requiredModules[j].Name
+	})
+
+	return structure.BackendDeclaration{
+		ModuleName:      moduleInfo.ModuleName,
+		Version:         moduleInfo.ModuleVersion,
+		Address:         moduleInfo.GrpcOuterAddress,
+		LibVersion:      LibraryVersion,
+		Endpoints:       endpoints,
+		RequiredModules: requiredModules,
 	}
 }
