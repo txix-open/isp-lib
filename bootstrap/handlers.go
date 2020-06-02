@@ -1,13 +1,18 @@
 package bootstrap
 
 import (
-	"github.com/json-iterator/go"
-	"reflect"
-
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
+	"github.com/json-iterator/go"
+	"os"
+	"reflect"
+	"syscall"
+)
+
+const (
+	configServiceEvent = 87
 )
 
 var (
@@ -24,6 +29,23 @@ func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfigu
 			log.WithMetadata(log.Metadata{"event": event, "data": string(data)}).
 				Info(stdcodes.ConfigServiceReceiveRequiredModuleAddress, "received required module address list")
 			f(list)
+		}
+	}
+}
+
+// kill proc itself, systemd will up service again
+func ListenRestartEvent() (string, func(data []byte)) {
+	return utils.ConfigRestart, func(_ []byte) {
+		log.WithMetadata(log.Metadata{"event": utils.ConfigRestart}).Info(configServiceEvent, "kill itself")
+		p, err := os.FindProcess(syscall.Getpid())
+		if err != nil {
+			log.WithMetadata(log.Metadata{"event": utils.ConfigRestart}).
+				Errorf(configServiceEvent, "find proc: %v", err)
+			return
+		}
+		if err := p.Signal(syscall.SIGTERM); err != nil {
+			log.WithMetadata(log.Metadata{"event": utils.ConfigRestart}).
+				Errorf(configServiceEvent, "kill: %v", err)
 		}
 	}
 }

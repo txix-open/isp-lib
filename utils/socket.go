@@ -18,6 +18,7 @@ const (
 	ConfigSendRoutesChanged       = "CONFIG:SEND_ROUTES_CHANGED"
 	ConfigSendRoutesOnRequest     = "CONFIG:SEND_ROUTES_ON_REQUEST"
 	ConfigLogRotation             = "CONFIG:LOG_ROTATION"
+	ConfigRestart                 = "CONFIG:MODULE_RESTART"
 
 	ModuleReady            = "MODULE:READY"
 	ModuleSendRequirements = "MODULE:SEND_REQUIREMENTS"
