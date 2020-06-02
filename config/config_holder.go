@@ -1,9 +1,9 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"os"
 	"os/signal"
 	"path"
@@ -37,6 +37,8 @@ var (
 	errInvalidFunc = errors.New("expecting func with two pointers to local config type")
 
 	reloadSig = syscall.SIGHUP
+
+	json = jsoniter.ConfigFastest
 )
 
 func init() {
@@ -105,7 +107,8 @@ func InitRemoteConfig(configuration interface{}, remoteConfig []byte) interface{
 			Fatalf(stdcodes.ModuleOverrideRemoteConfigError, "could not override remote config via env: %v", err)
 		return nil
 	}
-
+	log.WithMetadata(log.Metadata{"config": string(newRemoteConfig)}).
+		Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
 	if err := json.Unmarshal(newRemoteConfig, newConfiguration); err != nil {
 		log.WithMetadata(log.Metadata{"data": string(remoteConfig)}).

@@ -9,9 +9,8 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-pg/pg/v9 v9.1.5
 	github.com/go-pg/urlstruct v0.4.0 // indirect
-	github.com/go-redis/redis/v7 v7.2.0
+	github.com/go-redis/redis/v8 v8.0.0-beta.2
 	github.com/golang/protobuf v1.3.5
-	github.com/grpc-ecosystem/grpc-gateway v1.13.0
 	github.com/integration-system/bellows v1.0.0
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
 	github.com/integration-system/gowsdl v1.0.0
@@ -41,6 +40,6 @@ require (
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/sys v0.0.0-20200409092240-59c9f1ba88fa // indirect
 	google.golang.org/genproto v0.0.0-20200409111301-baae70f3302d
-	google.golang.org/grpc v1.28.1
+	google.golang.org/grpc v1.29.1
 	nhooyr.io/websocket v1.8.4
 )

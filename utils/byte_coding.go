@@ -1,21 +1,16 @@
 package utils
 
 import (
-	"bytes"
 	"github.com/json-iterator/go"
 	"github.com/json-iterator/go/extra"
 	"github.com/modern-go/reflect2"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc/stats"
-	"sync"
 	"time"
 	"unicode"
 	"unsafe"
 )
 
 const (
-	bufKey = "buf"
-	empty  = ""
+	empty = ""
 )
 
 var (
@@ -34,54 +29,12 @@ func init() {
 	ji.RegisterExtension(decExt)
 }
 
-type bufInjector struct {
-	stats.Handler
-	pool *sync.Pool
-}
-
-func (bi *bufInjector) TagRPC(ctx context.Context, i *stats.RPCTagInfo) context.Context {
-	buf := bi.pool.Get().(*bytes.Buffer)
-	ctx = context.WithValue(ctx, bufKey, buf)
-	return ctx
-}
-
-func (bi *bufInjector) HandleRPC(ctx context.Context, s stats.RPCStats) {
-	if _, ok := s.(*stats.End); ok {
-		buf, ok := ctx.Value(bufKey).(*bytes.Buffer)
-		if ok {
-			buf.Reset()
-			bi.pool.Put(buf)
-		}
-	}
-}
-
-func (bi *bufInjector) TagConn(ctx context.Context, s *stats.ConnTagInfo) context.Context {
-	return ctx
-}
-
-func (bi *bufInjector) HandleConn(ctx context.Context, s stats.ConnStats) {
-
-}
-
 func ConvertBytesToGo(b []byte, ptr interface{}) error {
 	return ji.Unmarshal(b, ptr)
 }
 
 func ConvertGoToBytes(data interface{}) ([]byte, error) {
 	return ji.Marshal(data)
-}
-
-func NewBufferInjector() *bufInjector {
-	return &bufInjector{
-		pool: &sync.Pool{
-			New: func() interface{} { return newBuf() },
-		},
-	}
-}
-
-func newBuf() *bytes.Buffer {
-	arr := make([]byte, 0, 32*1024)
-	return bytes.NewBuffer(arr)
 }
 
 func toCamelCase(s string) string {

@@ -30,7 +30,7 @@ func (rc *RxClient) ReceiveConfiguration(cfg structure.RedisConfiguration) {
 		}
 
 		rc.Client = newClient
-		rc.callInitHandler(newClient, err)
+		rc.callInitHandler(newClient, nil)
 	}
 }
 

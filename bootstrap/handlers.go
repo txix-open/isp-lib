@@ -1,13 +1,17 @@
 package bootstrap
 
 import (
-	"encoding/json"
+	"github.com/json-iterator/go"
 	"reflect"
 
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
+)
+
+var (
+	json = jsoniter.ConfigFastest
 )
 
 func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfiguration)) func([]byte) {
@@ -26,8 +30,6 @@ func UnmarshalAddressListAndThen(event string, f func([]structure.AddressConfigu
 
 func handleRemoteConfiguration(remoteConfigChan chan []byte, event string) func([]byte) {
 	return func(data []byte) {
-		log.WithMetadata(log.Metadata{"config": string(data)}).
-			Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
 		remoteConfigChan <- data
 	}
 }

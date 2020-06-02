@@ -31,8 +31,17 @@ func (addressConfiguration *AddressConfiguration) GetAddress() string {
 
 type RedisConfiguration struct {
 	Address   AddressConfiguration `schema:"Адрес Redis"`
+	Username  string               `schema:"Логин"`
 	Password  string               `schema:"Пароль"`
 	DefaultDB int                  `schema:"База данных по умолчанию"`
+	Sentinel  *RedisSentinel       `schema:"Настройки Sentinel"`
+}
+
+type RedisSentinel struct {
+	MasterName        string   `schema:"Наименование мастера"`
+	SentinelAddresses []string `schema:"Список адресов,host:port"`
+	SentinelUsername  string   `schema:"Логин Sentinel"`
+	SentinelPassword  string   `schema:"Пароль Sentinel"`
 }
 
 type RabbitConfig struct {

@@ -1,8 +1,10 @@
 package redis
 
 import (
-	rd "github.com/go-redis/redis/v7"
+	"context"
+	"github.com/go-redis/redis/v8"
 	"github.com/integration-system/isp-lib/v2/structure"
+	"time"
 )
 
 type DB int
@@ -14,28 +16,27 @@ const (
 	UserPermissionDb
 	DeviceTokenDb
 	DevicePermissionDb
+
+	defaultTimeout = 5 * time.Second
 )
 
 type Client struct {
-	*rd.Client
+	*redis.Client
 }
 
-func (c *Client) UseDb(dbIndex DB, f func(p rd.Pipeliner) error) ([]rd.Cmder, error) {
-	return c.Pipelined(useDb(dbIndex, f))
+func (c *Client) UseDb(dbIndex DB, f func(p redis.Pipeliner) error) ([]redis.Cmder, error) {
+	return c.Pipelined(context.Background(), useDb(dbIndex, f))
 }
 
-func (c *Client) UseDbTx(dbIndex DB, f func(p rd.Pipeliner) error) ([]rd.Cmder, error) {
-	return c.TxPipelined(useDb(dbIndex, f))
+func (c *Client) UseDbTx(dbIndex DB, f func(p redis.Pipeliner) error) ([]redis.Cmder, error) {
+	return c.TxPipelined(context.Background(), useDb(dbIndex, f))
 }
 
 func NewClient(cfg structure.RedisConfiguration) (*Client, error) {
-	c := rd.NewClient(&rd.Options{
-		Addr:     cfg.Address.GetAddress(),
-		Password: cfg.Password,
-		DB:       cfg.DefaultDB,
-	})
-
-	err := c.Ping().Err()
+	c := newClient(cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	err := c.Ping(ctx).Err()
 	if err != nil {
 		return nil, err
 	}
@@ -43,16 +44,33 @@ func NewClient(cfg structure.RedisConfiguration) (*Client, error) {
 	return &Client{Client: c}, nil
 }
 
-func useDb(dbIndex DB, f func(p rd.Pipeliner) error) func(p rd.Pipeliner) error {
-	return func(p rd.Pipeliner) error {
-		err := p.Select(int(dbIndex)).Err()
+func useDb(dbIndex DB, f func(p redis.Pipeliner) error) func(p redis.Pipeliner) error {
+	return func(p redis.Pipeliner) error {
+		err := p.Select(context.Background(), int(dbIndex)).Err()
 		if err != nil {
 			return err
 		}
-		err = f(p)
-		if err != nil {
-			return err
-		}
-		return nil
+		return f(p)
 	}
+}
+
+func newClient(cfg structure.RedisConfiguration) *redis.Client {
+	sentinel := cfg.Sentinel
+	if sentinel != nil {
+		return redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:       sentinel.MasterName,
+			SentinelAddrs:    sentinel.SentinelAddresses,
+			SentinelPassword: sentinel.SentinelPassword,
+			SentinelUsername: sentinel.SentinelUsername,
+			Username:         cfg.Username,
+			Password:         cfg.Password,
+			DB:               cfg.DefaultDB,
+		})
+	}
+	return redis.NewClient(&redis.Options{
+		Addr:     cfg.Address.GetAddress(),
+		Username: cfg.Username,
+		Password: cfg.Password,
+		DB:       cfg.DefaultDB,
+	})
 }
