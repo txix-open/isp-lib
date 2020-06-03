@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	proto "github.com/golang/protobuf/ptypes/struct"
-	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/streaming"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"

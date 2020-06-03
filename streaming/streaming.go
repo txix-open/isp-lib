@@ -3,7 +3,7 @@ package streaming
 import (
 	"strconv"
 
-	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

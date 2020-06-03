@@ -30,6 +30,11 @@ type EndpointDescriptor struct {
 	Handler          interface{} `json:"-"`
 }
 
+type ModuleDependency struct {
+	Name     string
+	Required bool
+}
+
 func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []EndpointDescriptor {
 	for i, descriptor := range descriptors {
 		descriptor.Path = path.Join(prefix, descriptor.Path)
@@ -40,11 +45,12 @@ func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []En
 }
 
 type BackendDeclaration struct {
-	ModuleName string               `json:"moduleName"`
-	Version    string               `json:"version"`
-	LibVersion string               `json:"libVersion"`
-	Endpoints  []EndpointDescriptor `json:"endpoints"`
-	Address    AddressConfiguration `json:"address"`
+	ModuleName      string               `json:"moduleName"`
+	Version         string               `json:"version"`
+	LibVersion      string               `json:"libVersion"`
+	Endpoints       []EndpointDescriptor `json:"endpoints"`
+	RequiredModules []ModuleDependency   `json:"requiredModules"`
+	Address         AddressConfiguration `json:"address"`
 }
 
 func (backedConfig *BackendDeclaration) IsIPAndPortEqual(ip string, port string) bool {

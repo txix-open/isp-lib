@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/structure"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"

@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/integration-system/isp-lib/v2/proto/stubs"
+	"github.com/integration-system/isp-lib/v2/isp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
