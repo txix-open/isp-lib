@@ -34,7 +34,7 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.6.1
 	github.com/swaggo/http-swagger v0.0.0-20200308142732-58ac5e232fba
-	github.com/swaggo/swag v1.6.7 // indirect
+	github.com/swaggo/swag v1.6.7
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
 	github.com/valyala/fasthttp v1.16.0
 	github.com/vmihailenco/bufpool v0.1.11 // indirect
