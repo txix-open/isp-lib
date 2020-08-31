@@ -18,6 +18,10 @@ type SwaggerInfo struct {
 	Description string
 }
 
+func InitSwagger(SwaggerInfo SwaggerInfo, doc string) {
+	swag.Register(swag.Name, &s{doc: doc, sInfo: SwaggerInfo})
+}
+
 type s struct {
 	doc   string
 	sInfo SwaggerInfo
@@ -42,8 +46,4 @@ func (s *s) ReadDoc() string {
 	}
 
 	return tpl.String()
-}
-
-func InitSwagger(SwaggerInfo SwaggerInfo, doc string) {
-	swag.Register(swag.Name, &s{doc: doc, sInfo: SwaggerInfo})
 }
