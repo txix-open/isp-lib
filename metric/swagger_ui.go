@@ -118,17 +118,17 @@ var url ="{{.URL}}";
 var resp = await fetch(url)
 	var spec = await resp.json();
 	spec.securityDefinitions = {
-	APPLICATION_TOKEN: {
+		APPLICATION_TOKEN: {
             type: "apiKey",
 			name: "X-APPLICATION-TOKEN",
             in: "header"
         },
-	USER_TOKEN: {
+		USER_TOKEN: {
             type: "apiKey",
             name: "X-USER-TOKEN",
             in: "header"
         },
-	ADMIN_TOKEN: {
+		ADMIN_TOKEN: {
             type: "apiKey",
             name: "X-AUTH-ADMIN",
             in: "header"
