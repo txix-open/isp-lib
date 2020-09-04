@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/swaggo/swag"
@@ -18,16 +19,33 @@ type SwaggerInfo struct {
 	Description string
 }
 
-func InitSwagger(SwaggerInfo SwaggerInfo, doc string) {
-	swag.Register(swag.Name, &s{doc: doc, sInfo: SwaggerInfo})
+var (
+	swaggerInfo *SwaggerInfo
+	lock        = new(sync.Mutex)
+)
+
+func InitSwagger(info SwaggerInfo, doc string) {
+	lock.Lock()
+	defer lock.Unlock()
+	swaggerInfo = &info
+	swag.Register(swag.Name, &swagProvider{doc: doc, sInfo: swaggerInfo, lock: lock})
 }
 
-type s struct {
+func SetHost(host string) {
+	lock.Lock()
+	defer lock.Unlock()
+	swaggerInfo.Host = host
+}
+
+type swagProvider struct {
 	doc   string
-	sInfo SwaggerInfo
+	sInfo *SwaggerInfo
+	lock  *sync.Mutex
 }
 
-func (s *s) ReadDoc() string {
+func (s *swagProvider) ReadDoc() string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	s.sInfo.Description = strings.Replace(s.sInfo.Description, "\n", "\\n", -1)
 
 	t, err := template.New("swagger_info").Funcs(template.FuncMap{
