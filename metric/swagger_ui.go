@@ -118,24 +118,24 @@ var url ="{{.URL}}";
 var resp = await fetch(url)
 	var spec = await resp.json();
 	spec.securityDefinitions = {
-	appToken: {
+	APPLICATION_TOKEN: {
             type: "apiKey",
 			name: "X-APPLICATION-TOKEN",
             in: "header"
         },
-	userToken	: {
+	USER_TOKEN: {
             type: "apiKey",
             name: "X-USER-TOKEN",
             in: "header"
         },
-	adminToken: {
+	ADMIN_TOKEN: {
             type: "apiKey",
-            name: "x-admin-token",
+            name: "X-AUTH-ADMIN",
             in: "header"
         }}
 Object.keys(spec.paths).forEach(path=>{
 	var post = spec.paths[path].post
-	post.security=[{appToken:[]},{userToken:[]},{adminToken:[]}]
+	post.security=[{APPLICATION_TOKEN:[]},{USER_TOKEN:[]},{ADMIN_TOKEN:[]}]
 })
   const ui = SwaggerUIBundle({
 	spec: spec,
