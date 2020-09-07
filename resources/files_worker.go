@@ -12,12 +12,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+const bufSize = 32 * 1024
+
 type CsvOption func(opts *csvOpts)
 
 type csvOpts struct {
 	closeErrorHandler func(err error)
 	csvSep            rune
-	gzipCompressed    bool
+	compressed        bool
 }
 
 func WithCloseErrorHandler(handler func(err error)) CsvOption {
@@ -29,12 +31,6 @@ func WithCloseErrorHandler(handler func(err error)) CsvOption {
 func WithSeparator(sep rune) CsvOption {
 	return func(opts *csvOpts) {
 		opts.csvSep = sep
-	}
-}
-
-func WithGzipCompression(isCompress bool) CsvOption {
-	return func(opts *csvOpts) {
-		opts.gzipCompressed = isCompress
 	}
 }
 
@@ -68,7 +64,7 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 
 	gzipReader, csvReader, err := makeReaders(readCloser, *opt)
 	defer func() {
-		if gzipReader != nil && opt.gzipCompressed {
+		if gzipReader != nil && opt.compressed {
 			err := gzipReader.Close()
 			if err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "close gzip reader"))
@@ -81,7 +77,6 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 			}
 		}
 	}()
-
 	if err != nil {
 		return err
 	}
@@ -103,7 +98,7 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 
 	bufWriter = bufio.NewWriterSize(writer, bufSize)
 
-	if opt.gzipCompressed {
+	if opt.compressed {
 		gzipWriter = gzip.NewWriter(bufWriter)
 		csvWriter = csv.NewWriter(gzipWriter)
 	} else {
@@ -118,7 +113,7 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "close csv writer"))
 			}
 		}
-		if gzipWriter != nil && opt.gzipCompressed {
+		if gzipWriter != nil && opt.compressed {
 			if err := gzipWriter.Flush(); err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "flash gzip writer"))
 			}
@@ -131,12 +126,39 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "flash buffer"))
 			}
 		}
-		if writer != nil {
-			if err := writer.Close(); err != nil {
-				opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
-			}
+		if err := writer.Close(); err != nil {
+			opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
 		}
 	}()
 
 	return writerHandler(csvWriter)
+}
+
+func newCsvOptions() *csvOpts {
+	return &csvOpts{
+		closeErrorHandler: func(err error) {
+		},
+		csvSep:     ';',
+		compressed: true,
+	}
+}
+
+func makeReaders(readCloser io.ReadCloser, opts csvOpts) (*gzip.Reader, *csv.Reader, error) {
+	if opts.compressed {
+		gzipReader, err := gzip.NewReader(readCloser)
+		if err != nil {
+			_ = readCloser.Close()
+			return nil, nil, errors.WithMessage(err, "open gzip reader")
+		}
+
+		csvReader := csv.NewReader(gzipReader)
+		csvReader.Comma = opts.csvSep
+
+		return gzipReader, csvReader, nil
+	} else {
+		csvReader := csv.NewReader(readCloser)
+		csvReader.Comma = opts.csvSep
+
+		return nil, csvReader, nil
+	}
 }
