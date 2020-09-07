@@ -1,21 +1,24 @@
 package resources
 
 import (
+	"compress/gzip"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 const (
+	bufSize = 32 * 1024
+
 	entityNameSeparator = "__"
 	translatesComa      = ','
 )
 
-var (
-	errInvalidFileNameFormat = "invalid file name. Expecting: '%sName__systemApplicationId'. Found: '%s'"
-)
+var errInvalidFileNameFormat = "invalid file name. Expecting: '%sName__systemApplicationId'. Found: '%s'"
 
 func ReadAllLines(
 	csvReader *csv.Reader,
@@ -53,6 +56,7 @@ func ReadAllLines(
 			translates = make([][]string, batchSize)
 		}
 	}
+
 	return onBatch(translates, i, total)
 }
 
@@ -61,6 +65,7 @@ func SplitEntityName(fullName, entityType string) (string, int32, error) {
 	if len(parts) != 2 {
 		return "", 0, fmt.Errorf(errInvalidFileNameFormat, entityType, fullName)
 	}
+
 	name := parts[0]
 	entityId := 0
 	if id, err := strconv.Atoi(parts[1]); err != nil {
@@ -68,6 +73,7 @@ func SplitEntityName(fullName, entityType string) (string, int32, error) {
 	} else {
 		entityId = id
 	}
+
 	return name, int32(entityId), nil
 }
 
@@ -81,4 +87,33 @@ func NewCsvWriter(w io.Writer) *csv.Writer {
 	csvWriter := csv.NewWriter(w)
 	csvWriter.Comma = translatesComa
 	return csvWriter
+}
+
+func newCsvOptions() *csvOpts {
+	return &csvOpts{
+		closeErrorHandler: func(err error) {
+		},
+		csvSep:     ';',
+		compressed: true,
+	}
+}
+
+func makeReaders(readCloser io.ReadCloser, opts csvOpts) (*gzip.Reader, *csv.Reader, error) {
+	if opts.compressed {
+		gzipReader, err := gzip.NewReader(readCloser)
+		if err != nil {
+			_ = readCloser.Close()
+			return nil, nil, errors.WithMessage(err, "open gzip reader")
+		}
+
+		csvReader := csv.NewReader(gzipReader)
+		csvReader.Comma = opts.csvSep
+
+		return gzipReader, csvReader, nil
+	} else {
+		csvReader := csv.NewReader(readCloser)
+		csvReader.Comma = opts.csvSep
+
+		return nil, csvReader, nil
+	}
 }

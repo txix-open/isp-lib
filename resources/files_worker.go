@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const bufSize = 32 * 1024
-
 type CsvOption func(opts *csvOpts)
 
 type csvOpts struct {
@@ -132,33 +130,4 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 	}()
 
 	return writerHandler(csvWriter)
-}
-
-func newCsvOptions() *csvOpts {
-	return &csvOpts{
-		closeErrorHandler: func(err error) {
-		},
-		csvSep:     ';',
-		compressed: true,
-	}
-}
-
-func makeReaders(readCloser io.ReadCloser, opts csvOpts) (*gzip.Reader, *csv.Reader, error) {
-	if opts.compressed {
-		gzipReader, err := gzip.NewReader(readCloser)
-		if err != nil {
-			_ = readCloser.Close()
-			return nil, nil, errors.WithMessage(err, "open gzip reader")
-		}
-
-		csvReader := csv.NewReader(gzipReader)
-		csvReader.Comma = opts.csvSep
-
-		return gzipReader, csvReader, nil
-	} else {
-		csvReader := csv.NewReader(readCloser)
-		csvReader.Comma = opts.csvSep
-
-		return nil, csvReader, nil
-	}
 }
