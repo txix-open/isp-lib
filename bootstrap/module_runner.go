@@ -66,7 +66,9 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 func (b *runner) run() {
 	b.RequireModule("isp-gate", func(list []structure.AddressConfiguration) bool {
 		if len(list) > 0 {
-			docs.SetHost(list[0].GetAddress())
+			address := list[0]
+			address.Port = "9000"
+			docs.SetHost(address.GetAddress())
 		}
 		return true
 	}, false)
