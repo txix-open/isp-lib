@@ -9,39 +9,6 @@ import (
 	"path/filepath"
 )
 
-func makeSwaggerHandler(metricIp string, metricPort string) func(*fasthttp.RequestCtx) {
-	config := &httpSwagger.Config{
-		URL:          "doc.json",
-		DeepLinking:  true,
-		DocExpansion: "list",
-		DomID:        "#swagger-ui",
-	}
-	configFunc := httpSwagger.URL(metricIp + ":" + metricPort + "/swagger/doc.json")
-	configFunc(config)
-	swaggerHandler := fasthttpadaptor.NewFastHTTPHandlerFunc(httpSwagger.Handler(configFunc))
-	t := template.New("swagger_index.html")
-	index, _ := t.Parse(indexTempl)
-
-	return func(ctx *fasthttp.RequestCtx) {
-		switch filepath.Ext(string(ctx.RequestURI())) {
-		case ".html":
-			ctx.SetContentType("text/html")
-		case ".json":
-			ctx.SetContentType("application/json")
-		case ".css":
-			ctx.SetContentType("text/css")
-		case ".js":
-			ctx.SetContentType("text/javascript")
-		}
-
-		if bytes.HasSuffix(ctx.RequestURI(), []byte("index.html")) {
-			_ = index.Execute(ctx, config)
-			return
-		}
-		swaggerHandler(ctx)
-	}
-}
-
 const indexTempl = `<!-- HTML for static distribution bundle build -->
 <!DOCTYPE html>
 <html lang="en">
@@ -180,3 +147,36 @@ function addedCustomHost(request,host){
 
 </html>
 `
+
+func makeSwaggerHandler(metricIp string, metricPort string) func(*fasthttp.RequestCtx) {
+	config := &httpSwagger.Config{
+		URL:          "doc.json",
+		DeepLinking:  true,
+		DocExpansion: "list",
+		DomID:        "#swagger-ui",
+	}
+	configFunc := httpSwagger.URL(metricIp + ":" + metricPort + "/swagger/doc.json")
+	configFunc(config)
+	swaggerHandler := fasthttpadaptor.NewFastHTTPHandlerFunc(httpSwagger.Handler(configFunc))
+	t := template.New("swagger_index.html")
+	index, _ := t.Parse(indexTempl)
+
+	return func(ctx *fasthttp.RequestCtx) {
+		switch filepath.Ext(string(ctx.RequestURI())) {
+		case ".html":
+			ctx.SetContentType("text/html")
+		case ".json":
+			ctx.SetContentType("application/json")
+		case ".css":
+			ctx.SetContentType("text/css")
+		case ".js":
+			ctx.SetContentType("text/javascript")
+		}
+
+		if bytes.HasSuffix(ctx.RequestURI(), []byte("index.html")) {
+			_ = index.Execute(ctx, config)
+			return
+		}
+		swaggerHandler(ctx)
+	}
+}
