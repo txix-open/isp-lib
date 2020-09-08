@@ -111,6 +111,7 @@ const indexTempl = `<!-- HTML for static distribution bundle build -->
 <script src="./swagger-ui-bundle.js"> </script>
 <script src="./swagger-ui-standalone-preset.js"> </script>
 <script>
+var inputUrl = '<strong>Base host:</strong> <input id=baseHost style="border-radius:4px;border:1px solid #d9d9d9;padding:8px 10px">'
 window.onload = async function() {
   // Build a system
  // enrich json
@@ -143,6 +144,7 @@ Object.keys(spec.paths).forEach(path=>{
     docExpansion: "{{.DocExpansion}}",
     dom_id: "{{.DomID}}",
     validatorUrl: null,
+	requestInterceptor: request	=> addedCustomHost(request,spec.host),
     presets: [
       SwaggerUIBundle.presets.apis,
       SwaggerUIStandalonePreset
@@ -152,8 +154,26 @@ Object.keys(spec.paths).forEach(path=>{
     ],
     layout: "StandaloneLayout"
   })
+window.ui = ui
+setTimeout(createInput,1000)
+}
 
-  window.ui = ui
+function createInput(){
+	var baseUrl = document.createElement('div');
+	baseUrl.id="baseUrl";
+	baseUrl.innerHTML = inputUrl;
+	var parentWrapper = document.getElementsByClassName('schemes')[0];
+	var firstChildWrapper = parentWrapper.firstChild;
+	parentWrapper.insertBefore(baseUrl,firstChildWrapper)
+}
+
+function addedCustomHost(request,host){
+	var input = document.getElementById('baseHost')
+	if (input.value !=""){
+		url = request.url.replace(host, input.value)
+		request.url= url;
+	}
+	return request;
 }
 </script>
 </body>
