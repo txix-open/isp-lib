@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/integration-system/isp-lib/v2/docs"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -63,6 +64,14 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 }
 
 func (b *runner) run() {
+	b.RequireModule("isp-gate", func(list []structure.AddressConfiguration) bool {
+		if len(list) > 0 {
+			address := list[0]
+			address.Port = "9000"
+			docs.SetHost(address.GetAddress())
+		}
+		return true
+	}, false)
 	ctx := b.initShutdownHandler()
 	b.ctx = ctx
 	defer goodbye.Exit(ctx, 0)
