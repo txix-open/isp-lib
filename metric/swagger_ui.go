@@ -127,7 +127,6 @@ setTimeout(createInput,1000)
 
 function createInput(){
 	var baseUrl = document.createElement('div');
-	baseUrl.id="baseUrl";
 	baseUrl.innerHTML = inputUrl;
 	var parentWrapper = document.getElementsByClassName('schemes')[0];
 	var firstChildWrapper = parentWrapper.firstChild;
