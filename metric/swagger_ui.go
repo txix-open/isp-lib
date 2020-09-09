@@ -78,7 +78,7 @@ const indexTempl = `<!-- HTML for static distribution bundle build -->
 <script src="./swagger-ui-bundle.js"> </script>
 <script src="./swagger-ui-standalone-preset.js"> </script>
 <script>
-var inputUrl = '<strong>Base host:</strong> <input id=baseHost style="border-radius:4px;border:1px solid #d9d9d9;padding:8px 10px">'
+var input = '<strong>Base host:</strong> <input id=baseHost style="border-radius:4px;border:1px solid #d9d9d9;padding:8px 10px">'
 window.onload = async function() {
   // Build a system
  // enrich json
@@ -122,15 +122,21 @@ Object.keys(spec.paths).forEach(path=>{
     layout: "StandaloneLayout"
   })
 window.ui = ui
-setTimeout(createInput,1000)
+setTimeout(createInput,1000,spec.host)
 }
 
-function createInput(){
+function createInput(host){
 	var baseUrl = document.createElement('div');
-	baseUrl.innerHTML = inputUrl;
+	baseUrl.innerHTML = input;
 	var parentWrapper = document.getElementsByClassName('schemes')[0];
 	var firstChildWrapper = parentWrapper.firstChild;
 	parentWrapper.insertBefore(baseUrl,firstChildWrapper)
+	setInputValue(host)
+}
+
+function setInputValue(value){
+	var input = document.getElementById('baseHost')
+	input.value = value
 }
 
 function addedCustomHost(request,host){
