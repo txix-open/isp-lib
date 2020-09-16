@@ -32,6 +32,12 @@ func WithSeparator(sep rune) CsvOption {
 	}
 }
 
+func WithCompression(isCompress bool) CsvOption {
+	return func(opts *csvOpts) {
+		opts.compressed = isCompress
+	}
+}
+
 func OpenTempFile() (io.WriteCloser, string, error) {
 	path, err := GetTempFilePath()
 	if err != nil {
@@ -75,6 +81,7 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 			}
 		}
 	}()
+
 	if err != nil {
 		return err
 	}
