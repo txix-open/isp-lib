@@ -45,11 +45,11 @@ func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []En
 }
 
 type HandlersInfo struct {
-	ProtocolName   string               //http,grpc e.t.c
-	Endpoints      []EndpointDescriptor //endpoint по протоколу
-	Port           string               // port и ipшник
-	SkipAuth       bool                 // Данные из locations
-	SkipExistCheck bool                 //Данные из location
+	ProtocolName   string
+	Endpoints      []EndpointDescriptor
+	Port           string
+	SkipAuth       bool
+	SkipExistCheck bool
 }
 
 type BackendDeclaration struct {
