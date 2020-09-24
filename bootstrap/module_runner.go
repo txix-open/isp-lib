@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/integration-system/isp-lib/v2/docs"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/integration-system/isp-lib/v2/docs"
 
 	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/backend"
@@ -454,5 +455,6 @@ func (b *runner) getModuleDeclaration() structure.BackendDeclaration {
 		LibVersion:      LibraryVersion,
 		Endpoints:       endpoints,
 		RequiredModules: requiredModules,
+		HandlersInfo:    moduleInfo.HandlersInfo,
 	}
 }

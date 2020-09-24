@@ -14,8 +14,9 @@ type ModuleInfo struct {
 	ModuleVersion    string
 	GrpcOuterAddress structure.AddressConfiguration
 	// Deprecated: use Endpoints instead
-	Handlers  []interface{}
-	Endpoints []structure.EndpointDescriptor
+	Handlers     []interface{}
+	Endpoints    []structure.EndpointDescriptor
+	HandlersInfo []structure.HandlersInfo
 }
 
 // contains base requirements for module

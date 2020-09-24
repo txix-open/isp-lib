@@ -44,6 +44,14 @@ func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []En
 	return descriptors
 }
 
+type HandlersInfo struct {
+	ProtocolName   string               //http,grpc e.t.c
+	Endpoints      []EndpointDescriptor //endpoint по протоколу
+	Port           string               // port и ipшник
+	SkipAuth       bool                 // Данные из locations
+	SkipExistCheck bool                 //Данные из location
+}
+
 type BackendDeclaration struct {
 	ModuleName      string               `json:"moduleName"`
 	Version         string               `json:"version"`
@@ -51,6 +59,7 @@ type BackendDeclaration struct {
 	Endpoints       []EndpointDescriptor `json:"endpoints"`
 	RequiredModules []ModuleDependency   `json:"requiredModules"`
 	Address         AddressConfiguration `json:"address"`
+	HandlersInfo    []HandlersInfo       `json:"handlersInfo"`
 }
 
 func (backedConfig *BackendDeclaration) IsIPAndPortEqual(ip string, port string) bool {
