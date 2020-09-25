@@ -12,11 +12,11 @@ import (
 type ModuleInfo struct {
 	ModuleName       string
 	ModuleVersion    string
-	GrpcOuterAddress structure.AddressConfiguration
+	GrpcOuterAddress structure.AddressConfiguration // if service have several protocols it's just address
 	// Deprecated: use Endpoints instead
 	Handlers     []interface{}
 	Endpoints    []structure.EndpointDescriptor
-	HandlersInfo []structure.HandlersInfo
+	HandlersInfo map[string]structure.HandlersInfo // protocol -> his endpoints description
 }
 
 // contains base requirements for module

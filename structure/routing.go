@@ -45,21 +45,20 @@ func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []En
 }
 
 type HandlersInfo struct {
-	ProtocolName   string
 	Endpoints      []EndpointDescriptor
-	Port           string
 	SkipAuth       bool
 	SkipExistCheck bool
+	Port           string
 }
 
 type BackendDeclaration struct {
-	ModuleName      string               `json:"moduleName"`
-	Version         string               `json:"version"`
-	LibVersion      string               `json:"libVersion"`
-	Endpoints       []EndpointDescriptor `json:"endpoints"`
-	RequiredModules []ModuleDependency   `json:"requiredModules"`
-	Address         AddressConfiguration `json:"address"`
-	HandlersInfo    []HandlersInfo       `json:"handlersInfo"`
+	ModuleName      string                  `json:"moduleName"`
+	Version         string                  `json:"version"`
+	LibVersion      string                  `json:"libVersion"`
+	Endpoints       []EndpointDescriptor    `json:"endpoints"`
+	RequiredModules []ModuleDependency      `json:"requiredModules"`
+	Address         AddressConfiguration    `json:"address"`
+	HandlersInfo    map[string]HandlersInfo `json:"handlersInfo"` // protocol -> his endpoints description
 }
 
 func (backedConfig *BackendDeclaration) IsIPAndPortEqual(ip string, port string) bool {
