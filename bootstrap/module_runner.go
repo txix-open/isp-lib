@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/integration-system/isp-lib/v2/docs"
 	"net/http"
 	"os"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/integration-system/isp-lib/v2/docs"
 
 	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/backend"
@@ -22,6 +22,7 @@ import (
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
+	errors2 "github.com/pkg/errors"
 	"github.com/thecodeteam/goodbye"
 	"nhooyr.io/websocket"
 )
@@ -29,11 +30,12 @@ import (
 const (
 	defaultConfigServiceConnectionTimeout       = 400 * time.Millisecond
 	defaultRemoteConfigAwaitTimeout             = 3 * time.Second
-	defaultMaxAckRetryTimeout                   = 10 * time.Second
 	heartbeatInterval                           = 1 * time.Second
 	heartbeatTimeout                            = 1 * time.Second
 	defaultConnectionReadLimit            int64 = 4 << 20 // 4 MB
 )
+
+var defaultMaxAckRetryTimeout = 10 * time.Second
 
 type runner struct {
 	bootstrapConfiguration
@@ -63,7 +65,7 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 	}
 }
 
-func (b *runner) run() {
+func (b *runner) run() (ret error) {
 	b.RequireModule("isp-gate", func(list []structure.AddressConfiguration) bool {
 		if len(list) > 0 {
 			address := list[0]
@@ -72,15 +74,12 @@ func (b *runner) run() {
 		}
 		return true
 	}, false)
-	ctx := b.initShutdownHandler()
-	b.ctx = ctx
-	defer goodbye.Exit(ctx, 0)
+	b.ctx = b.initShutdownHandler()
 
 	defer func() {
 		err := recover()
 		if err != nil {
-			debug.PrintStack()
-			log.Fatalf(stdcodes.ModuleRunFatalError, "could not run module, fatal error occurred: %v", err)
+			ret = errors2.WithStack(fmt.Errorf("from panic: %v", err))
 		}
 	}()
 
@@ -88,7 +87,7 @@ func (b *runner) run() {
 	b.initModuleInfo()                 //set moduleInfo
 	client := b.initSocketConnection() //create socket object, subscribe to all events
 	if client == nil {
-		return
+		return nil
 	}
 	b.client = client
 	b.initStatusMetrics() //add socket and required modules connections checkers in metrics
@@ -118,7 +117,10 @@ func (b *runner) run() {
 		select {
 		case data := <-b.remoteConfigChan:
 			oldConfigCopy := deepcopy.Copy(b.remoteConfigPtr)
-			newRemoteConfig := config.InitRemoteConfig(oldConfigCopy, data)
+			newRemoteConfig, err := config.InitRemoteConfig(oldConfigCopy, data)
+			if err != nil {
+				return err
+			}
 			oldRemoteConfig := b.remoteConfigPtr
 			if b.onRemoteConfigReceive != nil {
 				callFunc(b.onRemoteConfigReceive, newRemoteConfig, oldRemoteConfig)
@@ -183,18 +185,18 @@ func (b *runner) run() {
 			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
 			select {
 			case <-b.ctx.Done():
-				return
+				return nil
 			case <-time.After(defaultConfigServiceConnectionTimeout):
 			}
 			client := b.initSocketConnection()
-			// true only if exitChan closed
+			// true only if context done (shutdown module)
 			if client == nil {
-				return
+				return nil
 			}
 			b.client = client
 			go b.sendModuleConfigSchema()
 		case <-b.ctx.Done(): //return from main goroutine after shutdown signal
-			return
+			return nil
 		}
 	}
 }
@@ -356,7 +358,7 @@ func (b *runner) sendModuleRequirements() {
 	}
 
 	if !requirements.IsEmpty() {
-		bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+		bf := getDefaultBackoff(b.ctx)
 		if ok, bytes, res := ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf); ok {
 			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes), "response": string(res)}).
 				Info(stdcodes.ConfigServiceSendRequirements, "send module requirements")
@@ -369,7 +371,7 @@ func (b *runner) sendModuleDeclaration(eventType string) {
 
 	declaration := b.getModuleDeclaration()
 
-	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+	bf := getDefaultBackoff(b.ctx)
 	if ok, bytes, res := ackEvent(b.client, eventType, declaration, bf); ok {
 		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes), "response": string(res)}).
 			Info(stdcodes.ConfigServiceSendModuleReady, "send module declaration")
@@ -387,7 +389,7 @@ func (b *runner) sendModuleConfigSchema() {
 		req.DefaultConfig = defaultCfg
 	}
 
-	bf := getDefaultBackoff(b.ctx, defaultMaxAckRetryTimeout)
+	bf := getDefaultBackoff(b.ctx)
 	if ok, _, resp := ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf); ok {
 		log.WithMetadata(log.Metadata{"response": string(resp)}).
 			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
