@@ -6,7 +6,9 @@ import (
 
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/sirupsen/logrus"
+	"github.com/thecodeteam/goodbye"
 )
 
 const (
@@ -162,7 +164,15 @@ func (cfg *bootstrapConfiguration) OnModuleReady(f func()) *bootstrapConfigurati
 
 // starts module, block until interruption
 func (cfg *bootstrapConfiguration) Run() {
-	makeRunner(*cfg).run()
+	runner := makeRunner(*cfg)
+	defer func() {
+		goodbye.Exit(runner.ctx, 0)
+	}()
+	err := runner.run()
+	if err != nil {
+		//level `logrus.FatalLevel` will not lead to os.Exit()
+		log.Logf(logrus.FatalLevel, stdcodes.ModuleRunFatalError, "could not run module, fatal error occurred: %+v", err)
+	}
 }
 
 // entry point to describe module
