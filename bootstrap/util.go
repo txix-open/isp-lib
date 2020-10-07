@@ -16,10 +16,15 @@ import (
 	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
-	"github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"nhooyr.io/websocket"
 )
+
+type ackEventMsg struct {
+	event string
+	data  interface{}
+	err   error
+}
 
 func assertSingleParamFunc(rt reflect.Type, expectingType string) {
 	if rt.Kind() != reflect.Func ||
@@ -111,12 +116,24 @@ func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]stri
 	return connStrings, nil
 }
 
-func ackEvent(client etp.Client, event string, data interface{}, bf backoff.BackOff) (bool, []byte, []byte) {
+func (m *ackEventMsg) info() (int, string) {
+	switch m.event {
+	case utils.ModuleSendConfigSchema:
+		return stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config"
+	case utils.ModuleSendRequirements:
+		return stdcodes.ConfigServiceSendRequirements, "send module requirements"
+	case utils.ModuleReady:
+		return stdcodes.ConfigServiceSendModuleReady, "send module declaration"
+	}
+	return 0, "INVALID ackEvent massage event"
+}
+
+func ackEvent(client etp.Client, event string, data interface{}, bf backoff.BackOff) ackEventMsg {
+	msg := ackEventMsg{event: event, data: data}
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		log.WithMetadata(log.Metadata{"event": event}).
-			Errorf(stdcodes.ConfigServiceSendDataError, "marshal payload to json: %v", err)
-		return false, nil, nil
+		msg.err = fmt.Errorf("marshal payload to json: %v", err)
+		return msg
 	}
 
 	var response []byte
@@ -129,7 +146,7 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 		} else if err != nil {
 			return err
 		} else if string(response) != utils.WsOkResponse {
-			return errors.New("invalid response")
+			return fmt.Errorf("with invalid response: %s", response)
 		}
 		return nil
 	}
@@ -138,17 +155,17 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 		err = connClosedErr
 	}
 	if err != nil {
-		log.WithMetadata(log.Metadata{"event": event}).
-			Errorf(stdcodes.ConfigServiceSendDataError, "ack event to config service: %v", err)
-		return false, bytes, nil
+		msg.err = fmt.Errorf("ack event to config service: %v", err)
+		return msg
 	}
 
-	return true, bytes, response
+	return msg
 }
 
-func getDefaultBackoff(ctx context.Context, maxElapsedTime time.Duration) backoff.BackOff {
+func getDefaultBackoff(ctx context.Context) backoff.BackOff {
 	backOff := backoff.NewExponentialBackOff()
-	backOff.MaxElapsedTime = maxElapsedTime
+	backOff.MaxElapsedTime = ackRetryMaxTimeout
+	backOff.RandomizationFactor = ackRetryRandomizationFactor
 	bf := backoff.WithContext(backOff, ctx)
 	return bf
 }
