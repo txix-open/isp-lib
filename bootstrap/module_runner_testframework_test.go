@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	etp "github.com/integration-system/isp-etp-go/v2"
 	"github.com/integration-system/isp-lib/v2/config"
 	"github.com/integration-system/isp-lib/v2/structure"
@@ -116,7 +117,8 @@ type testingFuncs struct {
 }
 
 func (tb *testingBox) setDefault(t *testing.T) *testingBox {
-	defaultMaxAckRetryTimeout = 10 * time.Second
+	ackRetryMaxTimeout = 10 * time.Second
+	ackRetryRandomizationFactor = backoff.DefaultRandomizationFactor
 
 	tb.t = t
 	tb.checkingChan = make(chan checkingEvent, 20)
@@ -130,7 +132,7 @@ func (tb *testingBox) setDefault(t *testing.T) *testingBox {
 	}
 
 	tb.moduleFuncs.setDefault(tb.checkingChan)
-	tb.handleServerFuncs.setDefault(tb.checkingChan, tb.moduleReadyChan)
+	tb.handleServerFuncs.setDefault(tb)
 	tb.testingFuncs.setDefault()
 
 	return tb
@@ -155,39 +157,36 @@ func (m *moduleFuncs) setDefault(checkingChan chan<- checkingEvent) {
 	}
 }
 
-func (h *handleServerFuncs) setDefault(checkingChan, moduleReadyChan chan<- checkingEvent) {
+func (h *handleServerFuncs) setDefault(tb *testingBox) {
 	h.handleConnect = func(conn etp.Conn) {
-		checkingChan <- checkingEvent{typeEvent: eventHandleConnect, conn: conn}
+		tb.checkingChan <- checkingEvent{typeEvent: eventHandleConnect, conn: conn}
 	}
 	h.handleDisconnect = func(conn etp.Conn, _ error) {
-		checkingChan <- checkingEvent{typeEvent: eventHandleDisconnect, conn: conn}
+		tb.checkingChan <- checkingEvent{typeEvent: eventHandleDisconnect, conn: conn}
 	}
 	h.handleModuleReady = func(conn etp.Conn, data []byte) []byte {
 		event := checkingEvent{typeEvent: eventHandleModuleReady, conn: conn}
-		checkingChan <- event
-		moduleReadyChan <- event
+		tb.checkingChan <- event
+		tb.moduleReadyChan <- event
 		return []byte(utils.WsOkResponse)
 	}
 	h.handleModuleRequirements = func(conn etp.Conn, data []byte) []byte {
-		checkingChan <- checkingEvent{typeEvent: eventHandleModuleRequirements, conn: conn}
+		tb.checkingChan <- checkingEvent{typeEvent: eventHandleModuleRequirements, conn: conn}
 		return []byte(utils.WsOkResponse)
 	}
 	h.handleConfigSchema = func(conn etp.Conn, data []byte) []byte {
-		event := checkingEvent{typeEvent: eventHandledConfigSchema, conn: conn}
-		defer func() {
-			checkingChan <- event
-		}()
+		tb.checkingChan <- checkingEvent{typeEvent: eventHandledConfigSchema, conn: conn}
 
 		type confSchema struct {
 			Config json2.RawMessage
 		}
 		var configSchema confSchema
 		if err := json.Unmarshal(data, &configSchema); err != nil {
-			event.err = err
+			tb.t.Errorf("error at unmarshal data in handleConfigSchema: %v", err)
 			return []byte(err.Error())
 		}
 		if err := conn.Emit(context.Background(), utils.ConfigSendConfigWhenConnected, configSchema.Config); err != nil {
-			event.err = err
+			tb.t.Errorf("error at Emit in handleConfigSchema: %v", err)
 			return []byte(err.Error())
 		}
 		return []byte(utils.WsOkResponse)
