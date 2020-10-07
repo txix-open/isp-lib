@@ -45,11 +45,9 @@ func DescriptorsWithPrefix(prefix string, descriptors []EndpointDescriptor) []En
 }
 
 type HandlersInfo struct {
-	Endpoints      []EndpointDescriptor
-	SkipAuth       bool
-	SkipExistCheck bool
-	Port           string
-	PathPrefix     string
+	Endpoints  []EndpointDescriptor
+	Port       string
+	PathPrefix string
 }
 
 type BackendDeclaration struct {
