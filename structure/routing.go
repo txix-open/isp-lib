@@ -49,6 +49,7 @@ type HandlersInfo struct {
 	SkipAuth       bool
 	SkipExistCheck bool
 	Port           string
+	PathPrefix     string
 }
 
 type BackendDeclaration struct {
