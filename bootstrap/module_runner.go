@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/integration-system/isp-lib/v2/docs"
+	"github.com/sirupsen/logrus"
 
 	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/backend"
@@ -35,24 +37,44 @@ const (
 	defaultConnectionReadLimit            int64 = 4 << 20 // 4 MB
 )
 
-var defaultMaxAckRetryTimeout = 10 * time.Second
+var (
+	ackRetryMaxTimeout          = 10 * time.Second
+	ackRetryRandomizationFactor = backoff.DefaultRandomizationFactor
+)
 
 type runner struct {
 	bootstrapConfiguration
 
-	moduleInfo ModuleInfo
+	moduleInfo  ModuleInfo
+	moduleState moduleState
 
 	remoteConfigChan chan []byte
 	routesChan       chan structure.RoutingConfig
 	connectEventChan chan connectEvent
 	disconnectChan   chan struct{}
+	ackEventChan     chan ackEventMsg
 
 	client                   etp.Client
 	connStrings              *RoundRobinStrings
-	ready                    bool
 	lastFailedConnectionTime time.Time
 
 	ctx context.Context
+}
+
+type moduleState struct {
+	remoteConfigReady       bool
+	requiredModulesReady    bool
+	requiredSendReady       bool
+	routesReady             bool
+	moduleReady             bool
+	currentConnectedModules map[string]bool
+}
+
+func (t *moduleState) canSendModuleReady() bool {
+	if t.remoteConfigReady && t.requiredModulesReady && t.requiredSendReady && t.routesReady && !t.moduleReady {
+		return true
+	}
+	return false
 }
 
 func makeRunner(cfg bootstrapConfiguration) *runner {
@@ -62,6 +84,7 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 		connectEventChan:       make(chan connectEvent),
 		routesChan:             make(chan structure.RoutingConfig),
 		disconnectChan:         make(chan struct{}),
+		ackEventChan:           make(chan ackEventMsg),
 	}
 }
 
@@ -98,9 +121,7 @@ func (b *runner) run() (ret error) {
 
 	go b.sendModuleConfigSchema() //create and send schema with default remote config
 
-	b.ready = false //module not ready state by default
-
-	remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules := b.initialState()
+	b.moduleState = b.initialState()
 	remoteConfigTimeoutChan := time.After(defaultRemoteConfigAwaitTimeout) //used for log WARN message
 	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
 	initChan := make(chan struct{}, 1)
@@ -109,8 +130,8 @@ func (b *runner) run() (ret error) {
 	//in main goroutine handle all asynchronous events from config service
 	for {
 		//if all conditions are true, put signal into channel and later in loop send MODULE:READY event to config-service
-		if !b.ready && remoteConfigReady && requiredModulesReady && routesReady {
-			b.ready = true
+		if b.moduleState.canSendModuleReady() {
+			b.moduleState.moduleReady = true
 			initChan <- struct{}{}
 		}
 
@@ -127,8 +148,8 @@ func (b *runner) run() (ret error) {
 			}
 			b.remoteConfigPtr = newRemoteConfig
 
-			remoteConfigReady = true
-			if !b.ready {
+			b.moduleState.remoteConfigReady = true
+			if !b.moduleState.moduleReady {
 				go b.sendModuleRequirements() //after first time receiving config, send requirements
 			}
 
@@ -138,26 +159,26 @@ func (b *runner) run() (ret error) {
 			remoteConfigTimeoutChan = time.After(defaultRemoteConfigAwaitTimeout)
 		case routers := <-b.routesChan:
 			if b.onRoutesReceive != nil {
-				routesReady = b.onRoutesReceive(routers)
+				b.moduleState.routesReady = b.onRoutesReceive(routers)
 			}
 		case e := <-b.connectEventChan:
 			if c, ok := b.requiredModules[e.module]; ok {
 				if ok := c.consumer(e.addressList); ok {
-					currentConnectedModules[e.module] = true
+					b.moduleState.currentConnectedModules[e.module] = true
 				}
 
 				ok := true
 				for e, consumer := range b.requiredModules {
-					val := currentConnectedModules[e]
+					val := b.moduleState.currentConnectedModules[e]
 					if !val && consumer.mustConnect {
 						ok = false
 						break
 					}
 				}
-				requiredModulesReady = ok
+				b.moduleState.requiredModulesReady = ok
 
 				addrList := make([]string, 0, len(e.addressList))
-				if currentConnectedModules[e.module] {
+				if b.moduleState.currentConnectedModules[e.module] {
 					for _, addr := range e.addressList {
 						addrList = append(addrList, addr.GetAddress())
 					}
@@ -180,9 +201,24 @@ func (b *runner) run() (ret error) {
 				log.Warnf(stdcodes.ConfigServiceDisconnection, "failed to heartbeat config service: %v", err)
 			}
 			cancel()
+		case msg := <-b.ackEventChan:
+			md := log.WithMetadata(log.Metadata{"event": msg.event})
+			if logrus.IsLevelEnabled(logrus.DebugLevel) && utils.DEV {
+				(*md)["data"] = msg.data
+			}
+			if msg.err == nil {
+				md.Info(msg.info())
+				if msg.event == utils.ModuleSendRequirements {
+					b.moduleState.requiredSendReady = true
+				}
+			} else {
+				md.Error(stdcodes.ConfigServiceSendDataError, msg.err)
+				if err := b.client.Close(); err != nil {
+					log.Errorf(stdcodes.ConfigServiceConnectionError, "closing etp.client happened with error: %v", err)
+				}
+			}
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
-			b.ready = false
-			remoteConfigReady, requiredModulesReady, routesReady, currentConnectedModules = b.initialState()
+			b.moduleState = b.initialState()
 			select {
 			case <-b.ctx.Done():
 				return nil
@@ -329,7 +365,7 @@ func (b *runner) initStatusMetrics() {
 			"connected":                 status,
 			"lastFailedConnectionMsAgo": lastFailedConnectionMsAgo,
 			"address":                   uri,
-			"moduleReady":               b.ready,
+			"moduleReady":               b.moduleState.moduleReady,
 		}
 	})
 
@@ -359,10 +395,7 @@ func (b *runner) sendModuleRequirements() {
 
 	if !requirements.IsEmpty() {
 		bf := getDefaultBackoff(b.ctx)
-		if ok, bytes, res := ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf); ok {
-			log.WithMetadata(log.Metadata{"event": utils.ModuleSendRequirements, "data": string(bytes), "response": string(res)}).
-				Info(stdcodes.ConfigServiceSendRequirements, "send module requirements")
-		}
+		b.ackEventChan <- ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf)
 	}
 }
 
@@ -372,10 +405,7 @@ func (b *runner) sendModuleDeclaration(eventType string) {
 	declaration := b.getModuleDeclaration()
 
 	bf := getDefaultBackoff(b.ctx)
-	if ok, bytes, res := ackEvent(b.client, eventType, declaration, bf); ok {
-		log.WithMetadata(log.Metadata{"event": eventType, "data": string(bytes), "response": string(res)}).
-			Info(stdcodes.ConfigServiceSendModuleReady, "send module declaration")
-	}
+	b.ackEventChan <- ackEvent(b.client, eventType, declaration, bf)
 }
 
 func (b *runner) sendModuleConfigSchema() {
@@ -390,10 +420,7 @@ func (b *runner) sendModuleConfigSchema() {
 	}
 
 	bf := getDefaultBackoff(b.ctx)
-	if ok, _, resp := ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf); ok {
-		log.WithMetadata(log.Metadata{"response": string(resp)}).
-			Info(stdcodes.ConfigServiceSendConfigSchema, "send config schema and default config")
-	}
+	b.ackEventChan <- ackEvent(b.client, utils.ModuleSendConfigSchema, req, bf)
 }
 
 func (b *runner) sendModuleReady() {
@@ -401,16 +428,16 @@ func (b *runner) sendModuleReady() {
 }
 
 // returns module initial state from bootstrap configuration
-func (b *runner) initialState() (remoteConfigReady, requiredModulesReady, routesReady bool, currentConnectedModules map[string]bool) {
-	remoteConfigReady = false
-	currentConnectedModules = make(map[string]bool)
+func (b *runner) initialState() (moduleState moduleState) {
+	moduleState.remoteConfigReady = false
+	moduleState.currentConnectedModules = make(map[string]bool)
 	for evt, c := range b.requiredModules {
 		if !c.mustConnect {
-			currentConnectedModules[evt] = true
+			moduleState.currentConnectedModules[evt] = true
 		}
 	}
-	requiredModulesReady = len(b.requiredModules) == len(currentConnectedModules)
-	routesReady = b.onRoutesReceive == nil
+	moduleState.requiredModulesReady = len(b.requiredModules) == len(moduleState.currentConnectedModules)
+	moduleState.routesReady = b.onRoutesReceive == nil
 	return
 }
 
