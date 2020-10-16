@@ -1,4 +1,4 @@
-### v2.7.0
+### UNRELEASED v2.7.0
 * add handling errors from `ackEvent` which resolved deadlock of **main select** of method `run` of `bootstrap` package
 * add tests that check this **main select** and test framework for it
 * update protobuf
