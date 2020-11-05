@@ -17,7 +17,7 @@ type CsvOption func(opts *csvOpts)
 type csvOpts struct {
 	closeErrorHandler func(err error)
 	csvSep            rune
-	compressed        bool
+	compressed        bool //TODO : Или реализовать как-то по иному флаг "Сжатие"
 }
 
 func WithCloseErrorHandler(handler func(err error)) CsvOption {
@@ -131,8 +131,10 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "flash buffer"))
 			}
 		}
-		if err := writer.Close(); err != nil {
-			opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
+		if writer != nil {
+			if err := writer.Close(); err != nil {
+				opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
+			}
 		}
 	}()
 
