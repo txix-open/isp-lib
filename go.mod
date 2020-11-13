@@ -14,7 +14,7 @@ require (
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
 	github.com/integration-system/gowsdl v1.0.0
 	github.com/integration-system/isp-etp-go/v2 v2.1.2
-	github.com/integration-system/isp-log v1.1.5
+	github.com/integration-system/isp-log v1.1.6
 	github.com/integration-system/jsonschema v1.0.0
 	github.com/json-iterator/go v1.1.10
 	github.com/lib/pq v1.8.0
@@ -28,16 +28,16 @@ require (
 	github.com/pressly/goose v2.6.0+incompatible
 	github.com/profefe/profefe v0.0.0-20200307211836-5ab457f7a4d8
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/swaggo/http-swagger v0.0.0-20200308142732-58ac5e232fba
 	github.com/swaggo/swag v1.6.7
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
-	github.com/valyala/fasthttp v1.16.0
-	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	github.com/valyala/fasthttp v1.17.0
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.32.0
+	google.golang.org/grpc v1.33.2
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/yaml.v2 v2.3.0
 	nhooyr.io/websocket v1.8.6
