@@ -89,6 +89,7 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 }
 
 func (b *runner) run() (ret error) {
+	// TODO: убрать подписку, использовать ip конфиг-сервиса
 	b.RequireModule("isp-gate", func(list []structure.AddressConfiguration) bool {
 		if len(list) > 0 {
 			address := list[0]

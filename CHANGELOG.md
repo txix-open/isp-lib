@@ -1,7 +1,7 @@
-### UNRELEASED v2.7.0
-* add handling errors from `ackEvent` which resolved deadlock of **main select** of method `run` of `bootstrap` package
-* add tests that check this **main select** and test framework for it
-* update protobuf
+### v2.7.0
+* bootstrap: add handling errors from `ackEvent` which resolved deadlock of **main select**
+* bootstrap: add tests that check protocol interaction and test framework for it
+* update protobuf and grpc
 * fix panics when service has no swagger doc
 ### v2.6.2
 * add functionality to send requests from swagger-ui
