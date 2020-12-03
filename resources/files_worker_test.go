@@ -116,7 +116,7 @@ func TestCheckReader_Read(t *testing.T) {
 
 			return
 		}
-		if err := CsvReader(&reader, callback, WithSeparator(value.separator), WithCompression(value.compressed)); err != nil {
+		if err := CsvReader(&reader, callback, WithSeparator(value.separator), WithGzipCompression(value.compressed)); err != nil {
 			t.Errorf("reading error: %v", err)
 		}
 
@@ -176,7 +176,7 @@ func TestCheckWriter_Write(t *testing.T) {
 			return nil
 		}
 
-		if err := CsvWriter(&writer, callback, WithCompression(value.compressed), WithSeparator(value.separator)); err != nil {
+		if err := CsvWriter(&writer, callback, WithGzipCompression(value.compressed), WithSeparator(value.separator)); err != nil {
 			t.Errorf("write error: %v", err)
 		}
 
@@ -246,7 +246,7 @@ func TestCheckWriter_WriteAll(t *testing.T) {
 			return nil
 		}
 
-		if err := CsvWriter(&writer, callback, WithCompression(value.compressed), WithSeparator(value.separator)); err != nil {
+		if err := CsvWriter(&writer, callback, WithGzipCompression(value.compressed), WithSeparator(value.separator)); err != nil {
 			t.Errorf("write error: %v", err)
 		}
 
