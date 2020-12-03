@@ -85,12 +85,12 @@ func NewCsvReader(r io.Reader) *csv.Reader {
 }
 
 func UseCsvReader(bf *streaming.BeginFile, readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) error, opts ...CsvOption) error {
-	opts = append(opts, WithCompression(bf.ContentType == "application/gzip"))
+	opts = append(opts, WithGzipCompression(bf.ContentType == "application/gzip"))
 	return CsvReader(readCloser, readerHandler, opts...)
 }
 
 func UseCsvWriter(bf *streaming.BeginFile, writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
-	opts = append(opts, WithCompression(bf.ContentType == "application/gzip"))
+	opts = append(opts, WithGzipCompression(bf.ContentType == "application/gzip"))
 	return CsvWriter(writeCloser, writerHandler, opts...)
 }
 
@@ -104,13 +104,13 @@ func newCsvOptions() *csvOpts {
 	return &csvOpts{
 		closeErrorHandler: func(err error) {
 		},
-		csvSep:     ';',
-		compressed: false,
+		csvSep:         ';',
+		gzipCompressed: false,
 	}
 }
 
 func makeReaders(readCloser io.ReadCloser, opts csvOpts) (*gzip.Reader, *csv.Reader, error) {
-	if opts.compressed {
+	if opts.gzipCompressed {
 		gzipReader, err := gzip.NewReader(readCloser)
 		if err != nil {
 			_ = readCloser.Close()

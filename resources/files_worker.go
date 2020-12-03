@@ -17,7 +17,7 @@ type CsvOption func(opts *csvOpts)
 type csvOpts struct {
 	closeErrorHandler func(err error)
 	csvSep            rune
-	compressed        bool //TODO : Или реализовать как-то по иному флаг "Сжатие"
+	gzipCompressed    bool
 }
 
 func WithCloseErrorHandler(handler func(err error)) CsvOption {
@@ -32,9 +32,9 @@ func WithSeparator(sep rune) CsvOption {
 	}
 }
 
-func WithCompression(isCompress bool) CsvOption {
+func WithGzipCompression(isCompress bool) CsvOption {
 	return func(opts *csvOpts) {
-		opts.compressed = isCompress
+		opts.gzipCompressed = isCompress
 	}
 }
 
@@ -68,7 +68,7 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 
 	gzipReader, csvReader, err := makeReaders(readCloser, *opt)
 	defer func() {
-		if gzipReader != nil && opt.compressed {
+		if gzipReader != nil && opt.gzipCompressed {
 			err := gzipReader.Close()
 			if err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "close gzip reader"))
@@ -103,7 +103,7 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 
 	bufWriter = bufio.NewWriterSize(writer, bufSize)
 
-	if opt.compressed {
+	if opt.gzipCompressed {
 		gzipWriter = gzip.NewWriter(bufWriter)
 		csvWriter = csv.NewWriter(gzipWriter)
 	} else {
@@ -118,7 +118,7 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "close csv writer"))
 			}
 		}
-		if gzipWriter != nil && opt.compressed {
+		if gzipWriter != nil && opt.gzipCompressed {
 			if err := gzipWriter.Flush(); err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "flash gzip writer"))
 			}
