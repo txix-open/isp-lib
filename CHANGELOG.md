@@ -1,5 +1,6 @@
-### Unreleased
-* bootstrap: remove unnecessary subscription to isp-gate
+### v2.7.1
+* csvreader : added new argument (gzipCompressed)
+* streaming : added new writer for streaming
 ### v2.7.0
 * bootstrap: add handling errors from `ackEvent` which resolved deadlock of **main select**
 * bootstrap: add tests that check protocol interaction and test framework for it
