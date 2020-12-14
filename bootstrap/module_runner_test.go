@@ -10,6 +10,7 @@ import (
 
 	etp "github.com/integration-system/isp-etp-go/v2"
 	"github.com/integration-system/isp-lib/v2/config/schema"
+	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
 )
 
@@ -38,7 +39,10 @@ func (tb *testingBox) testingServersRun() {
 		SocketConfiguration(socketConfiguration).
 		OnSocketErrorReceive(tb.moduleFuncs.onRemoteErrorReceive).
 		DeclareMe(makeDeclaration).
-		OnRemoteConfigReceive(tb.moduleFuncs.onRemoteConfigReceive)
+		OnRemoteConfigReceive(tb.moduleFuncs.onRemoteConfigReceive).
+		RequireModule("somemodule", func(list []structure.AddressConfiguration) bool {
+			return true
+		}, false)
 
 	go cfg.testRun(tb)
 
