@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"sort"
@@ -58,7 +59,8 @@ type runner struct {
 	connStrings              *RoundRobinStrings
 	lastFailedConnectionTime time.Time
 
-	ctx context.Context
+	ctx          context.Context
+	socketConfig structure.SocketConfiguration
 }
 
 type moduleState struct {
@@ -89,15 +91,6 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 }
 
 func (b *runner) run() (ret error) {
-	// TODO: убрать подписку, использовать ip конфиг-сервиса
-	b.RequireModule("isp-gate", func(list []structure.AddressConfiguration) bool {
-		if len(list) > 0 {
-			address := list[0]
-			address.Port = "9000"
-			docs.SetHost(address.GetAddress())
-		}
-		return true
-	}, false)
 	b.ctx = b.initShutdownHandler()
 
 	defer func() {
@@ -107,8 +100,12 @@ func (b *runner) run() (ret error) {
 		}
 	}()
 
-	b.initLocalConfig()                //read local configuration, calls callback
-	b.initModuleInfo()                 //set moduleInfo
+	b.initLocalConfig() //read local configuration, calls callback
+	b.initModuleInfo()  //set moduleInfo
+	err := b.initSocketConfig()
+	if err != nil {
+		return fmt.Errorf("init socket configuration: %v", err)
+	}
 	client := b.initSocketConnection() //create socket object, subscribe to all events
 	if client == nil {
 		return nil
@@ -127,6 +124,7 @@ func (b *runner) run() (ret error) {
 	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
 	initChan := make(chan struct{}, 1)
 	heartbeatCh := time.NewTicker(heartbeatInterval)
+	defer heartbeatCh.Stop()
 
 	//in main goroutine handle all asynchronous events from config service
 	for {
@@ -274,25 +272,31 @@ func (b *runner) initModuleInfo() {
 	b.moduleInfo = b.makeModuleInfo(config.Get())
 }
 
-func (b *runner) initSocketConnection() etp.Client {
+func (b *runner) initSocketConfig() error {
 	if b.makeSocketConfig == nil {
-		panic(errors.New("socket configuration is not specified. Call 'SocketConfiguration' first"))
+		return errors.New("socket configuration is not specified. Call 'SocketConfiguration' first")
 	}
 
-	socketConfig := b.makeSocketConfig(b.localConfigPtr)
-	if b.connStrings == nil {
-		connectionStrings, err := getConfigServiceConnectionStrings(socketConfig)
-		if err != nil {
-			panic(err)
-		}
-		b.connStrings = NewRoundRobinStrings(connectionStrings)
+	b.socketConfig = b.makeSocketConfig(b.localConfigPtr)
+	connectionStrings, err := getConfigServiceConnectionStrings(b.socketConfig)
+	if err != nil {
+		return fmt.Errorf("invalid socket configuration: %v", err)
 	}
+	b.connStrings = NewRoundRobinStrings(connectionStrings)
 
+	// make assumption that public gateway is on the same host as config-service
+	configsHosts := strings.Split(b.socketConfig.Host, ";")
+	publicAddress := net.JoinHostPort(configsHosts[0], "9000")
+	docs.SetHost(publicAddress)
+
+	return nil
+}
+
+func (b *runner) initSocketConnection() etp.Client {
 	configAddress := b.connStrings.Get()
-
 	connectionReadLimit := defaultConnectionReadLimit
-	if socketConfig.ConnectionReadLimitKB > 0 {
-		connectionReadLimit = socketConfig.ConnectionReadLimitKB << 10
+	if b.socketConfig.ConnectionReadLimitKB > 0 {
+		connectionReadLimit = b.socketConfig.ConnectionReadLimitKB << 10
 	}
 	etpConfig := etp.Config{
 		HttpClient:          http.DefaultClient,
