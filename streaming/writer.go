@@ -6,11 +6,11 @@ import (
 	"github.com/integration-system/isp-lib/v2/isp"
 )
 
-type messageStreamFileWriter struct {
+type fileStreamWriter struct {
 	stream DuplexMessageStream
 }
 
-func (m *messageStreamFileWriter) Write(p []byte) (n int, err error) {
+func (m *fileStreamWriter) Write(p []byte) (n int, err error) {
 	err = m.stream.Send(&isp.Message{Body: &isp.Message_BytesBody{BytesBody: p}})
 	if err != nil {
 		return 0, err
@@ -18,7 +18,7 @@ func (m *messageStreamFileWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (m *messageStreamFileWriter) Close() error {
+func (m *fileStreamWriter) Close() error {
 	if err := m.stream.Send(FileEnd()); err != nil {
 		return err
 	}
@@ -35,11 +35,11 @@ func (m *messageStreamFileWriter) Close() error {
 	}
 }
 
-func NewMessageStreamFileWriter(stream DuplexMessageStream, bf BeginFile) (*messageStreamFileWriter, error) {
+func NewMessageStreamFileWriter(stream DuplexMessageStream, bf BeginFile) (io.WriteCloser, error) {
 	err := stream.Send(bf.ToMessage())
 	if err != nil {
 		return nil, err
 	}
 
-	return &messageStreamFileWriter{stream: stream}, nil
+	return &fileStreamWriter{stream: stream}, nil
 }

@@ -68,7 +68,7 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 
 	gzipReader, csvReader, err := makeReaders(readCloser, *opt)
 	defer func() {
-		if gzipReader != nil && opt.gzipCompressed {
+		if gzipReader != nil {
 			err := gzipReader.Close()
 			if err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "close gzip reader"))
