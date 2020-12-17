@@ -84,18 +84,13 @@ func NewCsvReader(r io.Reader) *csv.Reader {
 	return csvReader
 }
 
-func ProcessCSVWithNewWriter(stream streaming.DuplexMessageStream, bf streaming.BeginFile, writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) (io.WriteCloser, error) {
-	writeCloser, err := streaming.NewMessageStreamFileWriter(stream, bf)
-	if err != nil {
-		return nil, err
+func ProcessCSVWriter(writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
+	var contentType = "application/csv"
+	if t, ok := writeCloser.(streaming.FileStreamHolder); ok {
+		contentType = t.GetMessageContentType()
 	}
 
-	opts = append(opts, WithGzipCompression(bf.ContentType == "application/gzip"))
-	return writeCloser, CsvWriter(writeCloser, writerHandler, opts...)
-}
-
-func ProcessCSVWriter(bf streaming.BeginFile, writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
-	opts = append(opts, WithGzipCompression(bf.ContentType == "application/gzip"))
+	opts = append(opts, WithGzipCompression(contentType == "application/gzip"))
 	return CsvWriter(writeCloser, writerHandler, opts...)
 }
 

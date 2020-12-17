@@ -1,5 +1,6 @@
-### v2.7.1
-* csvreader : added new argument (gzipCompressed)
+### Unreleased
+* bootstrap: remove unnecessary subscription to isp-gate
+* csvwriter : added new option (`WithGzipCompression`)
 * streaming : added new writer for streaming
 ### v2.7.0
 * bootstrap: add handling errors from `ackEvent` which resolved deadlock of **main select**

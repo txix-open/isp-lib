@@ -116,7 +116,15 @@ func TestCheckReader_Read(t *testing.T) {
 
 			return
 		}
-		if err := CsvReader(&reader, callback, WithSeparator(value.separator), WithGzipCompression(value.compressed)); err != nil {
+
+		errorHandlerFunc := func(err error) {
+			t.Errorf("close error: %v", err)
+		}
+
+		if err := CsvReader(&reader, callback,
+			WithSeparator(value.separator),
+			WithGzipCompression(value.compressed),
+			WithCloseErrorHandler(errorHandlerFunc)); err != nil {
 			t.Errorf("reading error: %v", err)
 		}
 
@@ -161,7 +169,7 @@ func TestCheckWriter_Write(t *testing.T) {
 	}
 
 	for _, value := range testCases {
-		buffer := bytes.NewBuffer([]byte{})
+		buffer := new(bytes.Buffer)
 		writer := testWriteCloser{buffer}
 
 		callback := func(writer *csv.Writer) error {
@@ -176,77 +184,14 @@ func TestCheckWriter_Write(t *testing.T) {
 			return nil
 		}
 
-		if err := CsvWriter(&writer, callback, WithGzipCompression(value.compressed), WithSeparator(value.separator)); err != nil {
-			t.Errorf("write error: %v", err)
+		errorHandlerFunc := func(err error) {
+			t.Errorf("close error: %v", err)
 		}
 
-		if value.compressed {
-			result := buffer.String()
-			reader := strings.NewReader(result)
-			gReader, err := gzip.NewReader(reader)
-			if err != nil {
-				t.Errorf("unexpected error (gzip): %v", err)
-			}
-
-			res, err := ioutil.ReadAll(gReader)
-			if err != nil {
-				t.Errorf("unexpected error (reading): %v", err)
-			}
-
-			assert.EqualValuesf(t, value.want, string(res), "want %s, but have %s at case %s", value.want, buffer.String(), value.name)
-		} else {
-			assert.EqualValuesf(t, value.want, buffer.String(), "want %s, but have %s at case %s", value.want, buffer.String(), value.name)
-		}
-	}
-}
-
-func TestCheckWriter_WriteAll(t *testing.T) {
-	testCases := []testCase{
-		{
-			name:          "csv/1",
-			separator:     ';',
-			valuesToWrite: [][]string{{"name", "age", "race"}, {"ivan", "13", "human"}, {"petya", "80", "human"}},
-			want:          "name;age;race\nivan;13;human\npetya;80;human\n",
-		},
-		{
-			name:          "csv/2",
-			separator:     ';',
-			valuesToWrite: [][]string{{"name", "age", "race"}, {"ivan", "13", "human"}, {"petya", "", "human"}},
-			want:          "name;age;race\nivan;13;human\npetya;;human\n",
-		},
-		{
-			name:          "csv/3",
-			separator:     '=',
-			valuesToWrite: [][]string{{"name", "age", "race"}, {"ivan", "13", "human"}, {"petya", "", "human"}},
-			want:          "name=age=race\nivan=13=human\npetya==human\n",
-		},
-		{
-			name:          "zip/1",
-			separator:     ';',
-			compressed:    true,
-			valuesToWrite: [][]string{{"name", "age", "race"}, {"ivan", "13", "human"}, {"petya", "", "human"}},
-			want:          "name;age;race\nivan;13;human\npetya;;human\n",
-		},
-		{
-			name:          "zip/2",
-			separator:     '^',
-			compressed:    true,
-			valuesToWrite: [][]string{{"name", "age", "race"}, {"ivan", "13", "human"}, {"petya", "", "human"}},
-			want:          "name^age^race\nivan^13^human\npetya^^human\n",
-		},
-	}
-
-	for _, value := range testCases {
-		buffer := bytes.NewBuffer([]byte{})
-		writer := testWriteCloser{buffer}
-
-		callback := func(writer *csv.Writer) error {
-			writer.WriteAll(value.valuesToWrite)
-			writer.Flush()
-			return nil
-		}
-
-		if err := CsvWriter(&writer, callback, WithGzipCompression(value.compressed), WithSeparator(value.separator)); err != nil {
+		if err := CsvWriter(&writer, callback,
+			WithGzipCompression(value.compressed),
+			WithSeparator(value.separator),
+			WithCloseErrorHandler(errorHandlerFunc)); err != nil {
 			t.Errorf("write error: %v", err)
 		}
 
