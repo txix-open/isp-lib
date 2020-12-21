@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/integration-system/isp-lib/v2/streaming"
 	"github.com/pkg/errors"
 )
 
@@ -89,7 +90,16 @@ func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) 
 	return readerHandler(csvReader)
 }
 
-func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) error, opts ...CsvOption) error {
+func CsvWriter(writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
+	if t, ok := writeCloser.(streaming.FileStream); ok {
+		contentType := t.BeginFile().ContentType
+		opts = append(opts, WithGzipCompression(contentType == "application/gzip"))
+	}
+
+	return processCsvWriter(writeCloser, writerHandler, opts...)
+}
+
+func processCsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) error, opts ...CsvOption) error {
 	var (
 		bufWriter  *bufio.Writer
 		gzipWriter *gzip.Writer

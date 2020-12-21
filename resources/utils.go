@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/integration-system/isp-lib/v2/streaming"
 	"github.com/pkg/errors"
 )
 
@@ -82,16 +81,6 @@ func NewCsvReader(r io.Reader) *csv.Reader {
 	csvReader := csv.NewReader(r)
 	csvReader.Comma = translatesComa
 	return csvReader
-}
-
-func ProcessCSVWriter(writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
-	var contentType = "application/csv"
-	if t, ok := writeCloser.(streaming.FileStream); ok {
-		contentType = t.BeginFile().ContentType
-	}
-
-	opts = append(opts, WithGzipCompression(contentType == "application/gzip"))
-	return CsvWriter(writeCloser, writerHandler, opts...)
 }
 
 func NewCsvWriter(w io.Writer) *csv.Writer {
