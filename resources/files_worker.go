@@ -4,20 +4,21 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/csv"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-)
 
-const bufSize = 32 * 1024
+	"github.com/integration-system/isp-lib/v2/streaming"
+	"github.com/pkg/errors"
+)
 
 type CsvOption func(opts *csvOpts)
 
 type csvOpts struct {
 	closeErrorHandler func(err error)
 	csvSep            rune
+	gzipCompressed    bool
 }
 
 func WithCloseErrorHandler(handler func(err error)) CsvOption {
@@ -29,6 +30,12 @@ func WithCloseErrorHandler(handler func(err error)) CsvOption {
 func WithSeparator(sep rune) CsvOption {
 	return func(opts *csvOpts) {
 		opts.csvSep = sep
+	}
+}
+
+func WithGzipCompression(isCompress bool) CsvOption {
+	return func(opts *csvOpts) {
+		opts.gzipCompressed = isCompress
 	}
 }
 
@@ -54,12 +61,13 @@ func GetTempFilePath() (string, error) {
 	}
 }
 
-func CompressedCsvReader(path string, readerHandler func(reader *csv.Reader) error, opts ...CsvOption) error {
+func CsvReader(readCloser io.ReadCloser, readerHandler func(reader *csv.Reader) error, opts ...CsvOption) error {
 	opt := newCsvOptions()
 	for _, op := range opts {
 		op(opt)
 	}
-	file, gzipReader, csvReader, err := makeReaders(path, opt.csvSep)
+
+	gzipReader, csvReader, err := makeReaders(readCloser, *opt)
 	defer func() {
 		if gzipReader != nil {
 			err := gzipReader.Close()
@@ -67,32 +75,52 @@ func CompressedCsvReader(path string, readerHandler func(reader *csv.Reader) err
 				opt.closeErrorHandler(errors.WithMessage(err, "close gzip reader"))
 			}
 		}
-		if file != nil {
-			err := file.Close()
+		if readCloser != nil {
+			err := readCloser.Close()
 			if err != nil {
-				opt.closeErrorHandler(errors.WithMessage(err, "close file"))
+				opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
 			}
 		}
 	}()
+
 	if err != nil {
 		return err
 	}
+
 	return readerHandler(csvReader)
 }
 
-func CompressedCsvWriter(path string, writerHandler func(writer *csv.Writer) error, opts ...CsvOption) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
+func CsvWriter(writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
+	if t, ok := writeCloser.(streaming.FileStream); ok {
+		contentType := t.BeginFile().ContentType
+		opts = append(opts, WithGzipCompression(contentType == "application/gzip"))
 	}
+
+	return processCsvWriter(writeCloser, writerHandler, opts...)
+}
+
+func processCsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) error, opts ...CsvOption) error {
+	var (
+		bufWriter  *bufio.Writer
+		gzipWriter *gzip.Writer
+		csvWriter  *csv.Writer
+	)
+
 	opt := newCsvOptions()
 	for _, op := range opts {
 		op(opt)
 	}
-	bufWriter := bufio.NewWriterSize(file, bufSize)
-	gzipWriter := gzip.NewWriter(bufWriter)
-	csvWriter := csv.NewWriter(gzipWriter)
+
+	bufWriter = bufio.NewWriterSize(writer, bufSize)
+
+	if opt.gzipCompressed {
+		gzipWriter = gzip.NewWriter(bufWriter)
+		csvWriter = csv.NewWriter(gzipWriter)
+	} else {
+		csvWriter = csv.NewWriter(bufWriter)
+	}
 	csvWriter.Comma = opt.csvSep
+
 	defer func() {
 		if csvWriter != nil {
 			csvWriter.Flush()
@@ -113,37 +141,12 @@ func CompressedCsvWriter(path string, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "flash buffer"))
 			}
 		}
-		if file != nil {
-			if err = file.Close(); err != nil {
-				opt.closeErrorHandler(errors.WithMessage(err, "close file"))
+		if writer != nil {
+			if err := writer.Close(); err != nil {
+				opt.closeErrorHandler(errors.WithMessage(err, "close stream"))
 			}
 		}
 	}()
+
 	return writerHandler(csvWriter)
-}
-
-func newCsvOptions() *csvOpts {
-	return &csvOpts{
-		closeErrorHandler: func(err error) {
-		},
-		csvSep: ';',
-	}
-}
-
-func makeReaders(path string, csvSep rune) (*os.File, *gzip.Reader, *csv.Reader, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, nil, nil, errors.WithMessage(err, "open file")
-	}
-
-	gzipReader, err := gzip.NewReader(file)
-	if err != nil {
-		_ = file.Close()
-		return nil, nil, nil, errors.WithMessage(err, "open gzip reader")
-	}
-
-	csvReader := csv.NewReader(gzipReader)
-	csvReader.Comma = csvSep
-
-	return file, gzipReader, csvReader, nil
 }

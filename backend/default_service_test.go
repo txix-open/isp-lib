@@ -20,6 +20,10 @@ func streamMethod(streaming.DuplexMessageStream, metadata.MD) error {
 	return nil
 }
 
+func streamMethodWithIsolation(streaming.DuplexMessageStream, structure.Isolation) error {
+	return nil
+}
+
 var streamConsumerMethod streaming.StreamConsumer = func(streaming.DuplexMessageStream, metadata.MD) error {
 	return nil
 }
@@ -39,6 +43,10 @@ func TestResolveHandlers(t *testing.T) {
 			Handler: streamConsumerMethod,
 		},
 		{
+			Path:    "streaming/4",
+			Handler: streamMethodWithIsolation,
+		},
+		{
 			Path:    "func/1",
 			Handler: func() {},
 		},
@@ -47,5 +55,5 @@ func TestResolveHandlers(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, functions, 1)
-	assert.Len(t, streamFunctions, 3)
+	assert.Len(t, streamFunctions, 4)
 }
