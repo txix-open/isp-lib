@@ -7,12 +7,12 @@ import (
 )
 
 type fileStreamWriter struct {
-	stream            DuplexMessageStream
-	streamContentType string
+	stream    DuplexMessageStream
+	beginFile BeginFile
 }
 
-type FileStreamHolder interface {
-	GetMessageContentType() string
+type FileStream interface {
+	BeginFile() BeginFile
 }
 
 func (m *fileStreamWriter) Write(p []byte) (n int, err error) {
@@ -40,8 +40,8 @@ func (m *fileStreamWriter) Close() error {
 	}
 }
 
-func (m *fileStreamWriter) GetMessageContentType() string {
-	return m.streamContentType
+func (m *fileStreamWriter) BeginFile() BeginFile {
+	return m.beginFile
 }
 
 func NewFileStreamWriter(stream DuplexMessageStream, bf BeginFile) (io.WriteCloser, error) {
@@ -50,5 +50,5 @@ func NewFileStreamWriter(stream DuplexMessageStream, bf BeginFile) (io.WriteClos
 		return nil, err
 	}
 
-	return &fileStreamWriter{stream: stream, streamContentType: bf.ContentType}, nil
+	return &fileStreamWriter{stream: stream, beginFile: bf}, nil
 }

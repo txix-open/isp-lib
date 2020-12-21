@@ -118,7 +118,7 @@ func CsvWriter(writer io.WriteCloser, writerHandler func(writer *csv.Writer) err
 				opt.closeErrorHandler(errors.WithMessage(err, "close csv writer"))
 			}
 		}
-		if gzipWriter != nil && opt.gzipCompressed {
+		if gzipWriter != nil {
 			if err := gzipWriter.Flush(); err != nil {
 				opt.closeErrorHandler(errors.WithMessage(err, "flash gzip writer"))
 			}

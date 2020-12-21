@@ -86,8 +86,8 @@ func NewCsvReader(r io.Reader) *csv.Reader {
 
 func ProcessCSVWriter(writeCloser io.WriteCloser, writerHandler func(reader *csv.Writer) error, opts ...CsvOption) error {
 	var contentType = "application/csv"
-	if t, ok := writeCloser.(streaming.FileStreamHolder); ok {
-		contentType = t.GetMessageContentType()
+	if t, ok := writeCloser.(streaming.FileStream); ok {
+		contentType = t.BeginFile().ContentType
 	}
 
 	opts = append(opts, WithGzipCompression(contentType == "application/gzip"))
