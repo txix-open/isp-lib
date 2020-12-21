@@ -10,29 +10,29 @@ import (
 	"sync"
 )
 
-var (
-	noop = func(err error) {}
+var noop = func(err error) {}
+
+type (
+	Pipe interface {
+		Map(src chan interface{}) chan interface{}
+	}
+
+	Result struct {
+		Errors      map[int]string `json:",omitempty"`
+		Lines       int
+		ErrorsCount int
+		FileName    string
+	}
+
+	LineScanner struct {
+		filePattern string //Example: /var/log/log_%d
+		maxBuffSize int
+		skipLines   int
+		onError     func(err error)
+		makeReader  func(file *os.File) (io.Reader, error)
+		ch          chan interface{}
+	}
 )
-
-type Pipe interface {
-	Map(src chan interface{}) chan interface{}
-}
-
-type Result struct {
-	Errors      map[int]string `json:",omitempty"`
-	Lines       int
-	ErrorsCount int
-	FileName    string
-}
-
-type LineScanner struct {
-	filePattern string //Example: /var/log/log_%d
-	maxBuffSize int
-	skipLines   int
-	onError     func(err error)
-	makeReader  func(file *os.File) (io.Reader, error)
-	ch          chan interface{}
-}
 
 // iterate from 0 to n, replace index in 'filePattern' and tries to read file
 // it closes channel 'ch' and return if file is not exists

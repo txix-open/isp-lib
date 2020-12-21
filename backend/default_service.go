@@ -309,6 +309,10 @@ func getStreamConsumer(handler interface{}) streaming.StreamConsumer {
 		return f
 	case streaming.StreamConsumer:
 		return f
+	case func(streaming.DuplexMessageStream, structure.Isolation) error:
+		return func(stream streaming.DuplexMessageStream, md metadata.MD) error {
+			return f(stream, structure.Isolation(md))
+		}
 	default:
 		return nil
 	}
