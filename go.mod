@@ -6,9 +6,12 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20180315120708-ccb8e960c48f
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/cenkalti/backoff/v4 v4.0.2
+	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/dop251/goja v0.0.0-20201221183957-6b6d5e2b5d80
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-pg/pg/v9 v9.1.7
 	github.com/go-redis/redis/v8 v8.2.3
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/integration-system/bellows v1.0.0
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
