@@ -21,7 +21,7 @@ type ErrorEvent struct {
 }
 
 func (er ErrorEvent) Error() string {
-	return fmt.Sprintf("rxDbClient: %s: %v, config: %v", er.action, er.err, er.config)
+	return fmt.Sprintf("rxDbClient: %s: %v", er.action, er.err)
 }
 
 type errorHandler func(err *ErrorEvent)
