@@ -2,7 +2,6 @@ package script
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"time"
 
@@ -13,45 +12,55 @@ type Script struct {
 	prog *goja.Program
 }
 
-type ExecOption func(opt *scriptExecOptions)
+type ExecOption func(opt *scriptConfigOptions)
 
-type scriptExecOptions struct {
+type Machine struct {
+	*sync.Pool
+}
+
+type scriptConfigOptions struct {
+	timer         *time.Timer
 	logBuf        *bytes.Buffer
 	scriptTimeout time.Duration
 	data          map[string]interface{}
 }
 
-var pool = &sync.Pool{
-	New: func() interface{} {
-		return initVm()
-	},
+var byteNewLine = []byte("\n")
+
+func initVm() *goja.Runtime {
+	vm := goja.New()
+	return vm
 }
 
-func Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
-	vm := pool.Get().(*goja.Runtime)
+func InitMachine() *Machine {
+	return &Machine{&sync.Pool{
+		New: func() interface{} {
+			return initVm()
+		},
+	}}
+}
 
-	config := scriptExecOptions{scriptTimeout: 2 * time.Second}
-	for _, o := range opts {
-		o(&config)
-	}
-	t := time.AfterFunc(config.scriptTimeout, func() {
-		vm.Interrupt("execution timeout")
-	})
+func Create(source ...[]byte) (Script, error) {
+	prog, err := goja.Compile("script", string(bytes.Join(source, byteNewLine)), false)
+	return Script{prog: prog}, err
+}
+
+func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
+	vm := m.Get().(*goja.Runtime)
+	config := makeConfig(vm, opts...)
 	defer func() {
-		t.Stop()
+		config.timer.Stop()
 		vm.ClearInterrupt()
-		pool.Put(vm)
+		m.Put(vm)
 	}()
 
 	console := newConsoleLog(config.logBuf)
 	vm.Set("console", console)
-
-	//todo: нарушает абстракцию, но не знаю как иначе
 	for name, data := range config.data {
 		vm.Set(name, data)
 	}
-
 	vm.Set("arg", arg)
+
 	res, err := vm.RunProgram(s.prog)
 	if err != nil {
 		return nil, castErr(err)
@@ -59,24 +68,36 @@ func Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error)
 	return res.Export(), nil
 }
 
-func initVm() *goja.Runtime {
-	vm := goja.New()
-	return vm
+func WithAnotherScriptTimeout(duration time.Duration) ExecOption {
+	return func(opt *scriptConfigOptions) {
+		opt.scriptTimeout = duration
+	}
 }
 
-//func Create(sharedScript, source []byte) (Script, error) {
-//	script := fmt.Sprintf("%s\n%s", sharedScript, source)
-//	prog, err := goja.Compile("script", script, false)
-//	return Script{prog: prog}, err
-//}
-
-func Create(source ...[]byte) (Script, error) {
-	var scriptSource string
-	for _, s := range source {
-		scriptSource = fmt.Sprintf("%s%s", scriptSource, string(s))
+func WithLogging(logBuf *bytes.Buffer) ExecOption {
+	return func(opt *scriptConfigOptions) {
+		opt.logBuf = logBuf
 	}
-	prog, err := goja.Compile("script", scriptSource, false)
-	return Script{prog: prog}, err
+}
+
+func WithSet(name string, f interface{}) ExecOption {
+	return func(opt *scriptConfigOptions) {
+		if opt.data == nil {
+			opt.data = make(map[string]interface{}, 1)
+		}
+		opt.data[name] = f
+	}
+}
+
+func makeConfig(vm *goja.Runtime, opts ...ExecOption) *scriptConfigOptions {
+	config := &scriptConfigOptions{scriptTimeout: 2 * time.Second}
+	for _, o := range opts {
+		o(config)
+	}
+	config.timer = time.AfterFunc(config.scriptTimeout, func() {
+		vm.Interrupt("execution timeout")
+	})
+	return config
 }
 
 func castErr(err error) error {
@@ -86,36 +107,5 @@ func castErr(err error) error {
 			return castedErr
 		}
 	}
-
 	return err
-}
-
-func WithLogging(logBuf *bytes.Buffer) ExecOption {
-	return func(opt *scriptExecOptions) {
-		opt.logBuf = logBuf
-	}
-}
-
-func WithSpecifiedScriptTimeout(duration time.Duration) ExecOption {
-	return func(opt *scriptExecOptions) {
-		opt.scriptTimeout = duration
-	}
-}
-
-func WithFunc(name string, f interface{}) ExecOption {
-	return func(opt *scriptExecOptions) {
-		if opt.data == nil {
-			opt.data = make(map[string]interface{}, 1)
-		}
-		opt.data[name] = f
-	}
-}
-
-func WithData(name string, data interface{}) ExecOption {
-	return func(opt *scriptExecOptions) {
-		if opt.data == nil {
-			opt.data = make(map[string]interface{}, 1)
-		}
-		opt.data[name] = data
-	}
 }

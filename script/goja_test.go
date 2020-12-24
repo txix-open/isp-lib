@@ -2,6 +2,7 @@ package script
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -53,6 +54,28 @@ func TestGoja_AddFunction(t *testing.T) {
 	a.Equal(resp.Export(), map[string]interface{}{})
 }
 
+func TestScript_Default(t *testing.T) {
+	a := assert.New(t)
+
+	const SHARED = `
+	function shared() {
+		return arg["key"] + 2
+	}
+`
+	const SCRIPT = `
+	return shared()
+`
+	script, err := Create([]byte(SHARED), []byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	a.NoError(err)
+
+	arg := map[string]interface{}{"key": 3}
+
+	result, err := InitMachine().Execute(script, arg)
+	a.NoError(err)
+
+	a.Equal(int64(5), result)
+}
+
 func TestScript_WithLogging(t *testing.T) {
 	a := assert.New(t)
 
@@ -68,11 +91,17 @@ func TestScript_WithLogging(t *testing.T) {
 	arg := map[string]interface{}{"key": 3}
 
 	logBuf := new(bytes.Buffer)
-	result, err := Execute(script, arg, WithLogging(logBuf))
+	StartNewLog(logBuf)
+	result, err := InitMachine().Execute(script, arg, WithLogging(logBuf))
+	a.NoError(err)
+	logComplete := CompleteNewLog(logBuf)
+
+	var logRes interface{}
+	err = json.Unmarshal(logComplete, &logRes)
 	a.NoError(err)
 
+	a.Equal("[[{\"key\":3}],[1,2,3],[\"test\"]]", string(logComplete))
 	a.Equal(int64(5), result)
-	a.Equal("[{\"key\":3}],[1,2,3],[\"test\"],", logBuf.String())
 }
 
 func TestScript_WithData(t *testing.T) {
@@ -86,11 +115,11 @@ func TestScript_WithData(t *testing.T) {
 
 	arg := map[string]interface{}{"key": 3}
 
-	result, err := Execute(script, arg,
-		WithData("i", 1),
-		WithData("str", "two"),
-		WithData("mp", map[string]interface{}{"3": "four"}),
-		WithData("arr", []int{5, 6, 7}))
+	result, err := InitMachine().Execute(script, arg,
+		WithSet("i", 1),
+		WithSet("str", "two"),
+		WithSet("mp", map[string]interface{}{"3": "four"}),
+		WithSet("arr", []int{5, 6, 7}))
 	a.NoError(err)
 
 	a.Equal("1twofour35,6,7", result)
@@ -110,7 +139,7 @@ func TestScript_WithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := Execute(script, arg, WithFunc("sqrt", sqrt))
+	result, err := InitMachine().Execute(script, arg, WithSet("sqrt", sqrt))
 	a.NoError(err)
 
 	a.Equal(int64(9), result)
@@ -130,7 +159,7 @@ func TestScript_WithDataWithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := Execute(script, arg, WithFunc("sqrt", sqrt), WithData("i", 1))
+	result, err := InitMachine().Execute(script, arg, WithSet("sqrt", sqrt), WithSet("i", 1))
 	a.NoError(err)
 
 	a.Equal(int64(10), result)
