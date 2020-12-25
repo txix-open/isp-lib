@@ -72,7 +72,7 @@ func (c *configOptions) unset(vm *goja.Runtime) {
 	for name := range c.data {
 		vm.Set(name, goja.Undefined())
 	}
-
+	vm.SetFieldNameMapper(nil)
 }
 
 func NewMachine(opts ...ExecOption) *Machine {
