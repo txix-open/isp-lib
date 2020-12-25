@@ -44,3 +44,24 @@ func WithSetFieldNameMapper(fieldNameMapper goja.FieldNameMapper) ExecOption {
 		opt.fieldNameMapper = fieldNameMapper
 	}
 }
+
+func (c *configOptions) set(vm *goja.Runtime) {
+	vm.Set("arg", c.arg)
+	console := newConsoleLog(c.logBuf)
+	vm.Set("console", console)
+	if c.fieldNameMapper != nil {
+		vm.SetFieldNameMapper(c.fieldNameMapper)
+	}
+	for name, data := range c.data {
+		vm.Set(name, data)
+	}
+}
+
+func (c *configOptions) unset(vm *goja.Runtime) {
+	vm.Set("arg", goja.Undefined())
+	vm.Set("console", goja.Undefined())
+	for name := range c.data {
+		vm.Set(name, goja.Undefined())
+	}
+	vm.SetFieldNameMapper(nil)
+}

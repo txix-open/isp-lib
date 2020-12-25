@@ -42,44 +42,6 @@ func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interf
 	vm := m.pool.Get().(*goja.Runtime)
 	defer m.config.unset(vm)
 
-	config := newConfig(vm, arg, opts...)
-	defer func() {
-		config.timer.Stop()
-		vm.ClearInterrupt()
-		m.pool.Put(vm)
-	}()
-	config.set(vm)
-	defer config.unset(vm)
-
-	res, err := vm.RunProgram(s.prog)
-	if err != nil {
-		return nil, castErr(err)
-	}
-	return res.Export(), nil
-}
-
-func (c *configOptions) set(vm *goja.Runtime) {
-	vm.Set("arg", c.arg)
-	console := newConsoleLog(c.logBuf)
-	vm.Set("console", console)
-	if c.fieldNameMapper != nil {
-		vm.SetFieldNameMapper(c.fieldNameMapper)
-	}
-	for name, data := range c.data {
-		vm.Set(name, data)
-	}
-}
-
-func (c *configOptions) unset(vm *goja.Runtime) {
-	vm.Set("arg", goja.Undefined())
-	vm.Set("console", goja.Undefined())
-	for name := range c.data {
-		vm.Set(name, goja.Undefined())
-	}
-	vm.SetFieldNameMapper(nil)
-}
-
-func newConfig(vm *goja.Runtime, arg interface{}, opts ...ExecOption) *configOptions {
 	config := &configOptions{
 		arg:           arg,
 		scriptTimeout: 2 * time.Second,
@@ -90,7 +52,20 @@ func newConfig(vm *goja.Runtime, arg interface{}, opts ...ExecOption) *configOpt
 	config.timer = time.AfterFunc(config.scriptTimeout, func() {
 		vm.Interrupt("execution timeout")
 	})
-	return config
+	defer func() {
+		config.timer.Stop()
+		vm.ClearInterrupt()
+		m.pool.Put(vm)
+	}()
+
+	config.set(vm)
+	defer config.unset(vm)
+
+	res, err := vm.RunProgram(s.prog)
+	if err != nil {
+		return nil, castErr(err)
+	}
+	return res.Export(), nil
 }
 
 func castErr(err error) error {
