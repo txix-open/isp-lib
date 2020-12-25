@@ -17,7 +17,6 @@ var (
 type ErrorEvent struct {
 	action string
 	err    error
-	config structure.DBConfiguration
 }
 
 func (er ErrorEvent) Error() string {
@@ -58,7 +57,7 @@ func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
 		if rc.ensSchema && config.CreateSchema {
 			if err := ensureSchemaExists(config); err != nil {
 				if rc.eh != nil {
-					rc.eh(&ErrorEvent{"check schema", err, config})
+					rc.eh(&ErrorEvent{"check schema", err})
 				}
 				ok = false
 			}
@@ -67,7 +66,7 @@ func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
 		if ok && rc.ensMigrations {
 			if err := ensureMigrations(config); err != nil {
 				if rc.eh != nil {
-					rc.eh(&ErrorEvent{"run migrations", err, config})
+					rc.eh(&ErrorEvent{"run migrations", err})
 				}
 				ok = false
 			}
@@ -77,7 +76,7 @@ func (rc *RxDbClient) ReceiveConfiguration(config structure.DBConfiguration) {
 		if ok {
 			if pdb, err := NewDbConnection(config); err != nil {
 				if rc.eh != nil {
-					rc.eh(&ErrorEvent{"connect", err, config})
+					rc.eh(&ErrorEvent{"connect", err})
 				}
 				ok = false
 			} else {
