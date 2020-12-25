@@ -2,7 +2,6 @@ package script
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -65,12 +64,12 @@ func TestScript_Default(t *testing.T) {
 	const SCRIPT = `
 	return shared()
 `
-	script, err := Create([]byte(SHARED), []byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	script, err := NewScript([]byte(SHARED), []byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
 	a.NoError(err)
 
-	arg := map[string]interface{}{"key": 3}
+	arg := map[string]interface{}{"key": 3, "4": 7}
 
-	result, err := InitMachine().Execute(script, arg)
+	result, err := NewMachine().Execute(script, arg)
 	a.NoError(err)
 
 	a.Equal(int64(5), result)
@@ -85,22 +84,15 @@ func TestScript_WithLogging(t *testing.T) {
 	console.log("test")
 	return 5
 `
-	script, err := Create([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	script, err := NewScript([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
 	a.NoError(err)
 
 	arg := map[string]interface{}{"key": 3}
 
 	logBuf := new(bytes.Buffer)
-	StartNewLog(logBuf)
-	result, err := InitMachine().Execute(script, arg, WithLogging(logBuf))
+	result, err := NewMachine().Execute(script, arg, WithLogging(logBuf))
 	a.NoError(err)
-	logComplete := CompleteNewLog(logBuf)
-
-	var logRes interface{}
-	err = json.Unmarshal(logComplete, &logRes)
-	a.NoError(err)
-
-	a.Equal("[[{\"key\":3}],[1,2,3],[\"test\"]]", string(logComplete))
+	a.Equal("[{\"key\":3}],\n[1,2,3],\n[\"test\"],\n", logBuf.String())
 	a.Equal(int64(5), result)
 }
 
@@ -110,12 +102,12 @@ func TestScript_WithData(t *testing.T) {
 	const SCRIPT = `
 	return i + str + mp[3]+arg["key"]+arr
 `
-	script, err := Create([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	script, err := NewScript([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
 	a.NoError(err)
 
 	arg := map[string]interface{}{"key": 3}
 
-	result, err := InitMachine().Execute(script, arg,
+	result, err := NewMachine().Execute(script, arg,
 		WithSet("i", 1),
 		WithSet("str", "two"),
 		WithSet("mp", map[string]interface{}{"3": "four"}),
@@ -131,7 +123,7 @@ func TestScript_WithFunc(t *testing.T) {
 	const SCRIPT = `
 	return sqrt(arg["key"])
 `
-	script, err := Create([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	script, err := NewScript([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
 	a.NoError(err)
 
 	arg := map[string]interface{}{"key": 3}
@@ -139,7 +131,7 @@ func TestScript_WithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := InitMachine().Execute(script, arg, WithSet("sqrt", sqrt))
+	result, err := NewMachine().Execute(script, arg, WithSet("sqrt", sqrt))
 	a.NoError(err)
 
 	a.Equal(int64(9), result)
@@ -151,7 +143,7 @@ func TestScript_WithDataWithFunc(t *testing.T) {
 	const SCRIPT = `
 	return sqrt(arg["key"]) + sqrt(i)
 `
-	script, err := Create([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
+	script, err := NewScript([]byte(fmt.Sprintf("(function() { %s })();", SCRIPT)))
 	a.NoError(err)
 
 	arg := map[string]interface{}{"key": 3}
@@ -159,7 +151,7 @@ func TestScript_WithDataWithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := InitMachine().Execute(script, arg, WithSet("sqrt", sqrt), WithSet("i", 1))
+	result, err := NewMachine().Execute(script, arg, WithSet("sqrt", sqrt), WithSet("i", 1))
 	a.NoError(err)
 
 	a.Equal(int64(10), result)
