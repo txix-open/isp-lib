@@ -18,7 +18,7 @@ type configOptions struct {
 	fieldNameMapper goja.FieldNameMapper
 }
 
-func WithAnotherScriptTimeout(duration time.Duration) ExecOption {
+func WithScriptTimeout(duration time.Duration) ExecOption {
 	return func(opt *configOptions) {
 		opt.scriptTimeout = duration
 	}
@@ -39,7 +39,7 @@ func WithSet(name string, f interface{}) ExecOption {
 	}
 }
 
-func WithSetFieldNameMapper(fieldNameMapper goja.FieldNameMapper) ExecOption {
+func WithFieldNameMapper(fieldNameMapper goja.FieldNameMapper) ExecOption {
 	return func(opt *configOptions) {
 		opt.fieldNameMapper = fieldNameMapper
 	}

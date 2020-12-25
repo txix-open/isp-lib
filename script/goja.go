@@ -18,29 +18,20 @@ func NewScript(source ...[]byte) (Script, error) {
 }
 
 type Machine struct {
-	pool   *sync.Pool
-	config configOptions
+	pool *sync.Pool
 }
 
-func NewMachine(opts ...ExecOption) *Machine {
-	m := &Machine{}
-	m.config = configOptions{}
-	for _, o := range opts {
-		o(&m.config)
-	}
-	m.pool = &sync.Pool{
+func NewMachine() *Machine {
+	return &Machine{&sync.Pool{
 		New: func() interface{} {
 			vm := goja.New()
-			m.config.set(vm)
 			return vm
 		},
-	}
-	return m
+	}}
 }
 
 func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
 	vm := m.pool.Get().(*goja.Runtime)
-	defer m.config.unset(vm)
 
 	config := &configOptions{
 		arg:           arg,
