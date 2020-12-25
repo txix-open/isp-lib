@@ -12,20 +12,30 @@ type Script struct {
 	prog *goja.Program
 }
 
-type ExecOption func(opt *configOptions)
+func NewScript(source ...[]byte) (Script, error) {
+	prog, err := goja.Compile("script", string(bytes.Join(source, []byte("\n"))), false)
+	return Script{prog: prog}, err
+}
 
 type Machine struct {
 	pool   *sync.Pool
 	config configOptions
 }
 
-type configOptions struct {
-	scriptTimeout   time.Duration
-	timer           *time.Timer
-	arg             interface{}
-	logBuf          *bytes.Buffer
-	data            map[string]interface{}
-	fieldNameMapper goja.FieldNameMapper
+func NewMachine(opts ...ExecOption) *Machine {
+	m := &Machine{}
+	m.config = configOptions{}
+	for _, o := range opts {
+		o(&m.config)
+	}
+	m.pool = &sync.Pool{
+		New: func() interface{} {
+			vm := goja.New()
+			m.config.set(vm)
+			return vm
+		},
+	}
+	return m
 }
 
 func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
@@ -46,12 +56,6 @@ func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interf
 		return nil, castErr(err)
 	}
 	return res.Export(), nil
-}
-
-func (m *Machine) newVm() *goja.Runtime {
-	vm := goja.New()
-	m.config.set(vm)
-	return vm
 }
 
 func (c *configOptions) set(vm *goja.Runtime) {
@@ -75,56 +79,10 @@ func (c *configOptions) unset(vm *goja.Runtime) {
 	vm.SetFieldNameMapper(nil)
 }
 
-func NewMachine(opts ...ExecOption) *Machine {
-	m := &Machine{}
-	m.config = configOptions{}
-	for _, o := range opts {
-		o(&m.config)
-	}
-	m.pool = &sync.Pool{
-		New: func() interface{} {
-			return m.newVm()
-		},
-	}
-	return m
-}
-
-func NewScript(source ...[]byte) (Script, error) {
-	prog, err := goja.Compile("script", string(bytes.Join(source, []byte("\n"))), false)
-	return Script{prog: prog}, err
-}
-
-func WithAnotherScriptTimeout(duration time.Duration) ExecOption {
-	return func(opt *configOptions) {
-		opt.scriptTimeout = duration
-	}
-}
-
-func WithLogging(logBuf *bytes.Buffer) ExecOption {
-	return func(opt *configOptions) {
-		opt.logBuf = logBuf
-	}
-}
-
-func WithSet(name string, f interface{}) ExecOption {
-	return func(opt *configOptions) {
-		if opt.data == nil {
-			opt.data = make(map[string]interface{}, 1)
-		}
-		opt.data[name] = f
-	}
-}
-
-func WithSetFieldNameMapper(fieldNameMapper goja.FieldNameMapper) ExecOption {
-	return func(opt *configOptions) {
-		opt.fieldNameMapper = fieldNameMapper
-	}
-}
-
 func newConfig(vm *goja.Runtime, arg interface{}, opts ...ExecOption) *configOptions {
 	config := &configOptions{
-		scriptTimeout: 2 * time.Second,
 		arg:           arg,
+		scriptTimeout: 2 * time.Second,
 	}
 	for _, o := range opts {
 		o(config)
