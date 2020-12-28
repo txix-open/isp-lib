@@ -69,7 +69,7 @@ func TestScript_Default(t *testing.T) {
 
 	arg := map[string]interface{}{"key": 3, "4": 7}
 
-	result, err := NewMachine().Execute(script, arg)
+	result, err := NewEngine().Execute(script, arg)
 	a.NoError(err)
 
 	a.Equal(int64(5), result)
@@ -90,7 +90,7 @@ func TestScript_WithLogging(t *testing.T) {
 	arg := map[string]interface{}{"key": 3}
 
 	logBuf := new(bytes.Buffer)
-	result, err := NewMachine().Execute(script, arg, WithLogging(logBuf))
+	result, err := NewEngine().Execute(script, arg, WithLogging(logBuf))
 	a.NoError(err)
 	a.Equal("[{\"key\":3}],\n[1,2,3],\n[\"test\"],\n", logBuf.String())
 	a.Equal(int64(5), result)
@@ -107,7 +107,7 @@ func TestScript_WithData(t *testing.T) {
 
 	arg := map[string]interface{}{"key": 3}
 
-	result, err := NewMachine().Execute(script, arg,
+	result, err := NewEngine().Execute(script, arg,
 		WithSet("i", 1),
 		WithSet("str", "two"),
 		WithSet("mp", map[string]interface{}{"3": "four"}),
@@ -131,7 +131,7 @@ func TestScript_WithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := NewMachine().Execute(script, arg, WithSet("sqrt", sqrt))
+	result, err := NewEngine().Execute(script, arg, WithSet("sqrt", sqrt))
 	a.NoError(err)
 
 	a.Equal(int64(9), result)
@@ -151,7 +151,7 @@ func TestScript_WithDataWithFunc(t *testing.T) {
 	sqrt := func(x int) int {
 		return x * x
 	}
-	result, err := NewMachine().Execute(script, arg, WithSet("sqrt", sqrt), WithSet("i", 1))
+	result, err := NewEngine().Execute(script, arg, WithSet("sqrt", sqrt), WithSet("i", 1))
 	a.NoError(err)
 
 	a.Equal(int64(10), result)

@@ -21,7 +21,7 @@ type Engine struct {
 	pool *sync.Pool
 }
 
-func NewMachine() *Engine {
+func NewEngine() *Engine {
 	return &Engine{&sync.Pool{
 		New: func() interface{} {
 			vm := goja.New()
