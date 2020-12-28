@@ -17,12 +17,12 @@ func NewScript(source ...[]byte) (Script, error) {
 	return Script{prog: prog}, err
 }
 
-type Machine struct {
+type Engine struct {
 	pool *sync.Pool
 }
 
-func NewMachine() *Machine {
-	return &Machine{&sync.Pool{
+func NewMachine() *Engine {
+	return &Engine{&sync.Pool{
 		New: func() interface{} {
 			vm := goja.New()
 			return vm
@@ -30,7 +30,7 @@ func NewMachine() *Machine {
 	}}
 }
 
-func (m *Machine) Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
+func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interface{}, error) {
 	vm := m.pool.Get().(*goja.Runtime)
 
 	config := &configOptions{
