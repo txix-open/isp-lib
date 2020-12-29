@@ -1,3 +1,5 @@
+### v2.8.1
+* fix release tag
 ### v2.8.0
 * bootstrap: remove unnecessary subscription to isp-gate
 * csvwriter: added new option (`WithGzipCompression`)
