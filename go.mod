@@ -5,12 +5,12 @@ go 1.14
 require (
 	github.com/asaskevich/govalidator v0.0.0-20180315120708-ccb8e960c48f
 	github.com/buaazp/fasthttprouter v0.1.1
-	github.com/cenkalti/backoff/v4 v4.0.2
+	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/dop251/goja v0.0.0-20201221183957-6b6d5e2b5d80
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-pg/pg/v9 v9.1.7
-	github.com/go-redis/redis/v8 v8.2.3
+	github.com/go-redis/redis/v8 v8.4.4
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/golang/protobuf v1.4.2
 	github.com/integration-system/bellows v1.0.0
@@ -37,8 +37,8 @@ require (
 	github.com/swaggo/http-swagger v0.0.0-20200308142732-58ac5e232fba
 	github.com/swaggo/swag v1.6.7
 	github.com/thecodeteam/goodbye v0.0.0-20170927022442-a83968bda2d3
-	github.com/valyala/fasthttp v1.17.0
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
+	github.com/valyala/fasthttp v1.18.0
+	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.33.2
 	google.golang.org/protobuf v1.25.0
