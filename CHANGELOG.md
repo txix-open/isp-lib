@@ -2,6 +2,7 @@
 * bootstrap: remove unnecessary subscription to isp-gate
 * csvwriter : added new option (`WithGzipCompression`)
 * streaming : added new writer for streaming
+* added package `scripts` with goja wrapping
 ### v2.7.0
 * bootstrap: add handling errors from `ackEvent` which resolved deadlock of **main select**
 * bootstrap: add tests that check protocol interaction and test framework for it
