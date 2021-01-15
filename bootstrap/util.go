@@ -20,12 +20,6 @@ import (
 	"nhooyr.io/websocket"
 )
 
-type ackEventMsg struct {
-	event string
-	data  interface{}
-	err   error
-}
-
 func assertSingleParamFunc(rt reflect.Type, expectingType string) {
 	if rt.Kind() != reflect.Func ||
 		rt.NumIn() != 1 ||
@@ -64,8 +58,8 @@ func makeAddressListConsumer(module string, c chan connectEvent) func([]structur
 	}
 }
 
-func getOutboundIp() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+func getOutboundIp(target string) (string, error) {
+	conn, err := net.Dial("udp", target)
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +68,7 @@ func getOutboundIp() (string, error) {
 	return conn.LocalAddr().(*net.UDPAddr).IP.To4().String(), nil
 }
 
-func getWsUrl(host string, port int, secure bool, params map[string]string) string {
+func getWsUrl(host string, port string, secure bool, params map[string]string) string {
 	var prefix string
 	if secure {
 		prefix = "wss://"
@@ -82,7 +76,7 @@ func getWsUrl(host string, port int, secure bool, params map[string]string) stri
 		prefix = "ws://"
 	}
 	etpUrl := "/isp-etp/"
-	connectionString := prefix + host + ":" + strconv.Itoa(port) + etpUrl
+	connectionString := prefix + host + ":" + port + etpUrl
 	if len(params) > 0 {
 		vals := url.Values{}
 		for k, v := range params {
@@ -93,27 +87,46 @@ func getWsUrl(host string, port int, secure bool, params map[string]string) stri
 	return connectionString
 }
 
-func getConfigServiceConnectionStrings(sc structure.SocketConfiguration) ([]string, error) {
-	hosts := strings.Split(sc.Host, ";")
-	ports := strings.Split(sc.Port, ";")
+func parseConfigServiceAddresses(rawHosts, rawPorts string) ([]structure.AddressConfiguration, error) {
+	hosts := strings.Split(rawHosts, ";")
+	ports := strings.Split(rawPorts, ";")
 	if len(hosts) != len(ports) {
 		return nil, fmt.Errorf("different number of hosts/ports: %d/%d", len(hosts), len(ports))
 	}
-	connStrings := make([]string, len(hosts))
+	addrs := make([]structure.AddressConfiguration, len(hosts))
 	for i := 0; i < len(hosts); i++ {
 		port, err := strconv.Atoi(ports[i])
 		if err != nil {
 			return nil, err
 		}
+		addrs[i] = structure.AddressConfiguration{
+			IP:   hosts[i],
+			Port: strconv.Itoa(port),
+		}
+	}
+
+	return addrs, nil
+}
+
+func makeWebsocketConnectionStrings(sc structure.SocketConfiguration, addrs []structure.AddressConfiguration) []string {
+	connStrings := make([]string, len(addrs))
+	for _, addr := range addrs {
 		connectionString := getWsUrl(
-			hosts[i],
-			port,
+			addr.IP,
+			addr.Port,
 			sc.Secure,
 			sc.UrlParams,
 		)
-		connStrings[i] = connectionString
+		connStrings = append(connStrings, connectionString)
 	}
-	return connStrings, nil
+
+	return connStrings
+}
+
+type ackEventMsg struct {
+	event string
+	data  interface{}
+	err   error
 }
 
 func (m *ackEventMsg) info() (int, string) {

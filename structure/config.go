@@ -21,8 +21,8 @@ type MetricConfiguration struct {
 }
 
 type AddressConfiguration struct {
-	Port string `json:"port" schema:"Порт"`
 	IP   string `json:"ip" schema:"Хост"`
+	Port string `json:"port" schema:"Порт"`
 }
 
 func (addressConfiguration *AddressConfiguration) GetAddress() string {
@@ -88,13 +88,14 @@ type NatsConfig struct {
 }
 
 type SocketConfiguration struct {
-	Host                  string            `schema:"Хост"`
-	Port                  string            `schema:"Порт"`
-	Path                  string            `schema:"Путь"`
-	Secure                bool              `schema:"Защищенное соединение,если включено используется https"`
-	UrlParams             map[string]string `schema:"Параметры,"`
-	ConnectionString      string            `schema:"Строка соединения"`
-	ConnectionReadLimitKB int64             `schema:"Максимальное количество килобайт на чтение,при превышении соединение закрывается с ошибкой"`
+	Host      string            `schema:"Хост"`
+	Port      string            `schema:"Порт"`
+	Path      string            `schema:"Путь"`
+	Secure    bool              `schema:"Защищенное соединение,если включено используется https"`
+	UrlParams map[string]string `schema:"Параметры"`
+	// Deprecated: unused
+	ConnectionString      string `schema:"Строка соединения"`
+	ConnectionReadLimitKB int64  `schema:"Максимальное количество килобайт на чтение,при превышении соединение закрывается с ошибкой"`
 }
 
 type ElasticConfiguration struct {
