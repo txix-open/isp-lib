@@ -59,8 +59,9 @@ type runner struct {
 	connStrings              *RoundRobinStrings
 	lastFailedConnectionTime time.Time
 
-	ctx          context.Context
-	socketConfig structure.SocketConfiguration
+	ctx             context.Context
+	socketConfig    structure.SocketConfiguration
+	configAddresses []structure.AddressConfiguration
 }
 
 type moduleState struct {
@@ -278,10 +279,12 @@ func (b *runner) initSocketConfig() error {
 	}
 
 	b.socketConfig = b.makeSocketConfig(b.localConfigPtr)
-	connectionStrings, err := getConfigServiceConnectionStrings(b.socketConfig)
+	var err error
+	b.configAddresses, err = parseConfigServiceAddresses(b.socketConfig.Host, b.socketConfig.Port)
 	if err != nil {
 		return fmt.Errorf("invalid socket configuration: %v", err)
 	}
+	connectionStrings := makeWebsocketConnectionStrings(b.socketConfig, b.configAddresses)
 	b.connStrings = NewRoundRobinStrings(connectionStrings)
 
 	// make assumption that public gateway is on the same host as config-service
@@ -458,7 +461,7 @@ func (b *runner) getModuleDeclaration() structure.BackendDeclaration {
 		addr = strings.Replace(addr, "http://", "", -1)
 	}
 	if addr == "" {
-		ip, err := getOutboundIp()
+		ip, err := getOutboundIp(b.configAddresses[0].GetAddress())
 		if err != nil {
 			panic(err)
 		}

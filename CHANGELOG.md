@@ -1,3 +1,5 @@
+### UNRELEASED
+* fix outbound ip detection
 ### v2.8.1
 * fix release tag
 ### v2.8.0
