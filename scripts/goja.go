@@ -17,6 +17,10 @@ func NewScript(source ...[]byte) (Script, error) {
 	return Script{prog: prog}, err
 }
 
+func NewFuncScript(scriptBody []byte) (Script, error) {
+	return NewScript([]byte("(function() {\n"), scriptBody, []byte("\n})();"))
+}
+
 type Engine struct {
 	pool *sync.Pool
 }
