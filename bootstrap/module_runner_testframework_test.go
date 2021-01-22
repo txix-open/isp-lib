@@ -117,7 +117,7 @@ type testingFuncs struct {
 }
 
 func (tb *testingBox) setDefault(t *testing.T) *testingBox {
-	ackRetryMaxTimeout = 10 * time.Second
+	ackMaxTotalRetryTime = defaultAckMaxTotalRetryTime
 	ackRetryRandomizationFactor = backoff.DefaultRandomizationFactor
 
 	tb.t = t

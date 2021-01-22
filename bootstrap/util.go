@@ -138,7 +138,7 @@ func (m *ackEventMsg) info() (int, string) {
 	case utils.ModuleReady:
 		return stdcodes.ConfigServiceSendModuleReady, "send module declaration"
 	}
-	return 0, "INVALID ackEvent massage event"
+	return 0, "INVALID ackEvent message event"
 }
 
 func ackEvent(client etp.Client, event string, data interface{}, bf backoff.BackOff) ackEventMsg {
@@ -152,7 +152,9 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 	var response []byte
 	var connClosedErr error
 	ack := func() error {
-		response, err = client.EmitWithAck(context.Background(), event, bytes)
+		ctx, cancel := context.WithTimeout(context.Background(), ackMaxTimeout)
+		defer cancel()
+		response, err = client.EmitWithAck(ctx, event, bytes)
 		if errors.As(err, &websocket.CloseError{}) {
 			connClosedErr = err
 			return nil
@@ -177,7 +179,7 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 
 func getDefaultBackoff(ctx context.Context) backoff.BackOff {
 	backOff := backoff.NewExponentialBackOff()
-	backOff.MaxElapsedTime = ackRetryMaxTimeout
+	backOff.MaxElapsedTime = ackMaxTotalRetryTime
 	backOff.RandomizationFactor = ackRetryRandomizationFactor
 	bf := backoff.WithContext(backOff, ctx)
 	return bf
