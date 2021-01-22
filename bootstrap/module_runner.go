@@ -35,11 +35,13 @@ const (
 	defaultRemoteConfigAwaitTimeout             = 3 * time.Second
 	heartbeatInterval                           = 1 * time.Second
 	heartbeatTimeout                            = 1 * time.Second
+	ackMaxTimeout                               = 600 * time.Millisecond
+	defaultAckMaxTotalRetryTime                 = 10 * time.Second
 	defaultConnectionReadLimit            int64 = 4 << 20 // 4 MB
 )
 
 var (
-	ackRetryMaxTimeout          = 10 * time.Second
+	ackMaxTotalRetryTime        = defaultAckMaxTotalRetryTime
 	ackRetryRandomizationFactor = backoff.DefaultRandomizationFactor
 )
 
@@ -213,9 +215,7 @@ func (b *runner) run() (ret error) {
 				}
 			} else {
 				md.Error(stdcodes.ConfigServiceSendDataError, msg.err)
-				if err := b.client.Close(); err != nil {
-					log.Errorf(stdcodes.ConfigServiceConnectionError, "closing etp.client happened with error: %v", err)
-				}
+				_ = b.client.Close()
 			}
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.moduleState = b.initialState()

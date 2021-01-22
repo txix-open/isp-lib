@@ -176,11 +176,11 @@ func Test_moduleReceivedAnotherConfig(t *testing.T) {
 // Попытки повторного подключения инициализируются функцией backoff.Retry(..), стандартное время следующего повтора
 // растет экспоненциально, но точно определяется на основании псевдослучайного ackRetryRandomizationFactor
 // который для данных тестов отключен
-// Функция backoff.Retry(..) отдает управление не по истечении ackRetryMaxTimeout,
-// а при расчете времени следующего повтора, если это время будет больше ackRetryMaxTimeout
+// Функция backoff.Retry(..) отдает управление не по истечении ackMaxTotalRetryTime,
+// а при расчете времени следующего повтора, если это время будет больше ackMaxTotalRetryTime
 func Test_NotOkResponse_handleConfigSchema(t *testing.T) {
 	tb := (&testingBox{}).setDefault(t)
-	ackRetryMaxTimeout = 1600 * time.Millisecond
+	ackMaxTotalRetryTime = 1600 * time.Millisecond
 	ackRetryRandomizationFactor = 0
 
 	tb.expectedOrder = []eventType{
@@ -203,7 +203,7 @@ func Test_NotOkResponse_handleConfigSchema(t *testing.T) {
 		if startTime == zeroTime {
 			startTime = time.Now()
 		}
-		if startTime.After(time.Now().Add(-ackRetryMaxTimeout)) {
+		if startTime.After(time.Now().Add(-ackMaxTotalRetryTime)) {
 			return []byte("NOT OK")
 		} else {
 			type confSchema struct {
@@ -228,7 +228,7 @@ func Test_NotOkResponse_handleConfigSchema(t *testing.T) {
 
 func Test_NotOkResponse_handleModuleRequirements(t *testing.T) {
 	tb := (&testingBox{}).setDefault(t)
-	ackRetryMaxTimeout = 1600 * time.Millisecond
+	ackMaxTotalRetryTime = 1600 * time.Millisecond
 	ackRetryRandomizationFactor = 0
 
 	tb.expectedOrder = []eventType{
@@ -253,7 +253,7 @@ func Test_NotOkResponse_handleModuleRequirements(t *testing.T) {
 		if startTime == zeroTime {
 			startTime = time.Now()
 		}
-		if startTime.After(time.Now().Add(-ackRetryMaxTimeout)) {
+		if startTime.After(time.Now().Add(-ackMaxTotalRetryTime)) {
 			return []byte("NOT OK")
 		} else {
 			return []byte(utils.WsOkResponse)
@@ -266,7 +266,7 @@ func Test_NotOkResponse_handleModuleRequirements(t *testing.T) {
 
 func Test_NotOkResponse_handleModuleReady(t *testing.T) {
 	tb := (&testingBox{}).setDefault(t)
-	ackRetryMaxTimeout = 1600 * time.Millisecond
+	ackMaxTotalRetryTime = 1600 * time.Millisecond
 	ackRetryRandomizationFactor = 0
 
 	tb.expectedOrder = []eventType{
@@ -293,7 +293,7 @@ func Test_NotOkResponse_handleModuleReady(t *testing.T) {
 		if startTime == zeroTime {
 			startTime = time.Now()
 		}
-		if startTime.After(time.Now().Add(-ackRetryMaxTimeout)) {
+		if startTime.After(time.Now().Add(-ackMaxTotalRetryTime)) {
 			return []byte("NOT OK")
 		} else {
 			tb.moduleReadyChan <- event
