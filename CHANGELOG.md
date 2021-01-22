@@ -1,4 +1,4 @@
-### UNRELEASED
+### v2.8.2
 * bootstrap: fix outbound ip detection
 * bootstrap: remove unnecessary double close error log 
 ### v2.8.1
