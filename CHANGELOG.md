@@ -1,5 +1,6 @@
 ### UNRELEASED
-* bootstrap: fix empty connection string 
+* bootstrap: fix empty connection string
+* bootstrap: always send module requirements
 ### v2.8.2
 * bootstrap: fix outbound ip detection
 * bootstrap: remove unnecessary double close error log 
