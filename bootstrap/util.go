@@ -109,7 +109,7 @@ func parseConfigServiceAddresses(rawHosts, rawPorts string) ([]structure.Address
 }
 
 func makeWebsocketConnectionStrings(sc structure.SocketConfiguration, addrs []structure.AddressConfiguration) []string {
-	connStrings := make([]string, len(addrs))
+	connStrings := make([]string, 0, len(addrs))
 	for _, addr := range addrs {
 		connectionString := getWsUrl(
 			addr.IP,

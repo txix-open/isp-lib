@@ -401,10 +401,8 @@ func (b *runner) sendModuleRequirements() {
 		RequireRoutes:   b.onRoutesReceive != nil,
 	}
 
-	if !requirements.IsEmpty() {
-		bf := getDefaultBackoff(b.ctx)
-		b.ackEventChan <- ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf)
-	}
+	bf := getDefaultBackoff(b.ctx)
+	b.ackEventChan <- ackEvent(b.client, utils.ModuleSendRequirements, requirements, bf)
 }
 
 func (b *runner) sendModuleDeclaration(eventType string) {
