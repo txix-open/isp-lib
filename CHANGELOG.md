@@ -1,4 +1,4 @@
-### UNRELEASED
+### v2.8.3
 * bootstrap: fix empty connection string
 * bootstrap: always send module requirements
 ### v2.8.2
