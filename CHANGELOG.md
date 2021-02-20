@@ -1,3 +1,5 @@
+### v2.8.4
+* moved event entities to event-lib
 ### v2.8.3
 * bootstrap: fix empty connection string
 * bootstrap: always send module requirements
