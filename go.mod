@@ -13,13 +13,13 @@ require (
 	github.com/go-redis/redis/v8 v8.4.4
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/integration-system/bellows v1.0.0
+	github.com/integration-system/bellows v1.0.1
 	github.com/integration-system/go-cmp v0.0.0-20190131081942-ac5582987a2f
 	github.com/integration-system/gowsdl v1.0.0
 	github.com/integration-system/isp-etp-go/v2 v2.1.2
-	github.com/integration-system/isp-event-lib v1.5.0 // indirect
+	github.com/integration-system/isp-event-lib v1.6.0
 	github.com/integration-system/isp-log v1.1.6
-	github.com/integration-system/jsonschema v1.0.0
+	github.com/integration-system/jsonschema v1.0.1
 	github.com/json-iterator/go v1.1.10
 	github.com/lib/pq v1.8.0
 	github.com/modern-go/reflect2 v1.0.1
