@@ -2,10 +2,17 @@ package structure
 
 import (
 	"encoding/json"
-	"fmt"
 	"net"
-	"time"
+
+	"github.com/integration-system/isp-event-lib/client/nats"
+	"github.com/integration-system/isp-event-lib/mq"
 )
+
+// DEPRECATED
+type RabbitConfig = mq.Config
+
+// DEPRECATED
+type NatsConfig = nats.Config
 
 type MetricAddress struct {
 	AddressConfiguration
@@ -45,29 +52,6 @@ type RedisSentinel struct {
 	SentinelPassword string `schema:"Пароль Sentinel"`
 }
 
-type RabbitConfig struct {
-	Address  AddressConfiguration `valid:"required~Required" schema:"Адрес RabbitMQ"`
-	Vhost    string               `schema:"Виртуальный хост,для изоляции очередей"`
-	User     string               `schema:"Логин"`
-	Password string               `schema:"Пароль"`
-}
-
-func (rc RabbitConfig) GetUri() string {
-	if rc.User == "" {
-		return fmt.Sprintf("amqp://%s/%s", rc.Address.GetAddress(), rc.Vhost)
-	} else {
-		return fmt.Sprintf("amqp://%s:%s@%s/%s", rc.User, rc.Password, rc.Address.GetAddress(), rc.Vhost)
-	}
-}
-
-func (rc RabbitConfig) ReconnectionTimeout() time.Duration {
-	/*timeout := rc.ReconnectionTimeoutMs
-	if timeout <= 0 {
-		timeout = defaultReconnectionTimeout
-	}*/
-	return 3 * time.Millisecond
-}
-
 type DBConfiguration struct {
 	Address      string `valid:"required~Required" schema:"Адрес"`
 	Schema       string `valid:"required~Required" schema:"Схема"`
@@ -77,14 +61,6 @@ type DBConfiguration struct {
 	Password     string `schema:"Пароль"`
 	PoolSize     int    `schema:"Количество соединений в пуле,по умолчанию 10 соединений на каждое ядро"`
 	CreateSchema bool   `schema:"Создание схемы,если включено, создает схему, если ее не существует"`
-}
-
-type NatsConfig struct {
-	ClusterId       string               `valid:"required~Required" schema:"Идентификатор кластера"`
-	Address         AddressConfiguration `valid:"required~Required" schema:"Адрес Nats"`
-	PingAttempts    int                  `schema:"Максимальное количество попыток соединения,когда будет достигнут максимальное значение количества попыток соединение будет закрыто"`
-	PintIntervalSec int                  `schema:"Интервал проверки соединения,значение в секундах, через которое происходит проверка соединения"`
-	ClientId        string               `json:"-"`
 }
 
 type SocketConfiguration struct {
