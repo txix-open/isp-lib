@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	LibraryVersion = "2.8.3"
+	LibraryVersion = "2.8.4"
 )
 
 func init() {
