@@ -38,8 +38,7 @@ func GetRegistry() metrics.Registry {
 }
 
 func InitHttpServer(metricConfig structure.MetricConfiguration) {
-	metricPort := metricConfig.Address.Port
-	if metricPort == "" {
+	if metricConfig.Address.Port == "" {
 		log.Errorf(stdcodes.ModuleMetricServiceError, "port for metric service must be specified")
 		return
 	}
@@ -47,9 +46,8 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 	if metricPath == "" {
 		metricPath = defaultMetricPath
 	}
-	metricIp := metricConfig.Address.IP
-	if metricIp == "" {
-		metricIp = defaultIpAddress
+	if metricConfig.Address.IP == "" {
+		metricConfig.Address.IP = defaultIpAddress
 	}
 
 	router := fasthttprouter.New()
@@ -58,7 +56,7 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 	router.GET(startProfilingPath, handleEnableProfilingRequest)
 	router.GET(stopProfilingPath, handleDisableProfilingRequest)
 
-	router.GET("/swagger/*name", makeSwaggerHandler(metricIp, metricPort))
+	router.GET("/swagger/*name", makeSwaggerHandler(metricConfig.Address.AddressConfiguration))
 
 	lock.Lock()
 	newMetricServer := &fasthttp.Server{
@@ -73,8 +71,10 @@ func InitHttpServer(metricConfig structure.MetricConfiguration) {
 	metricServer = newMetricServer
 	lock.Unlock()
 
+	listenAddr := metricConfig.Address.GetAddress()
+	log.Infof(0, "start metric service on %s", listenAddr)
 	go func() {
-		err := newMetricServer.ListenAndServe(metricIp + ":" + metricPort)
+		err := newMetricServer.ListenAndServe(listenAddr)
 		if err != nil {
 			log.Errorf(stdcodes.ModuleMetricServiceError, "could not start metric service: %v", err)
 		}

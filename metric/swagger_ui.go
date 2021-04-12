@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"path/filepath"
 
+	"github.com/integration-system/isp-lib/v2/structure"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/swaggo/swag"
 	"github.com/valyala/fasthttp"
@@ -156,14 +157,14 @@ function addedCustomHost(request,host){
 </html>
 `
 
-func makeSwaggerHandler(metricIp string, metricPort string) func(*fasthttp.RequestCtx) {
+func makeSwaggerHandler(addr structure.AddressConfiguration) func(*fasthttp.RequestCtx) {
 	config := &httpSwagger.Config{
 		URL:          "doc.json",
 		DeepLinking:  true,
 		DocExpansion: "list",
 		DomID:        "#swagger-ui",
 	}
-	configFunc := httpSwagger.URL(metricIp + ":" + metricPort + "/swagger/doc.json")
+	configFunc := httpSwagger.URL(addr.GetAddress() + "/swagger/doc.json")
 	configFunc(config)
 	swaggerHandler := fasthttpadaptor.NewFastHTTPHandlerFunc(httpSwagger.Handler(configFunc))
 	t := template.New("swagger_index.html")
