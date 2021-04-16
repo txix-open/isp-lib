@@ -3,6 +3,7 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/integration-system/isp-lib/v2/internal/testdata/testone"
@@ -102,4 +103,22 @@ func TestDefinitionCrossPackageCollision(t *testing.T) {
 	if !assert.Equal(t, (refs[0] != refs[1]), true) {
 		fmt.Println(string(json1))
 	}
+}
+
+func TestGenerateConfigSchemaAnonymousStruct(t *testing.T) {
+	// TODO
+	t.Skip("known bug")
+	type mockRemoteConfig struct {
+		Value1 string
+		Value2 int
+		Value3 struct {
+			Value31 string
+		}
+	}
+
+	s := GenerateConfigSchema(&mockRemoteConfig{})
+	assert.Len(t, s.Definitions, 1)
+	assert.Len(t, s.Properties, 3)
+	value3Ref := strings.TrimPrefix(s.Properties["value3"].Ref, "#/definitions/")
+	assert.Contains(t, s.Definitions, value3Ref)
 }
