@@ -193,7 +193,7 @@ func (b *runner) run() (ret error) {
 			}
 			go b.sendModuleReady()
 		case <-heartbeatCh.C:
-			if b.client == nil {
+			if b.client == nil || b.client.Closed() {
 				continue
 			}
 
@@ -215,7 +215,9 @@ func (b *runner) run() (ret error) {
 				}
 			} else {
 				md.Error(stdcodes.ConfigServiceSendDataError, msg.err)
-				_ = b.client.Close()
+				if !errors.As(msg.err, &websocket.CloseError{}) {
+					_ = b.client.Close()
+				}
 			}
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.moduleState = b.initialState()
@@ -309,6 +311,8 @@ func (b *runner) initSocketConnection() etp.Client {
 	client.OnDisconnect(func(err error) {
 		if websocket.CloseStatus(err) != websocket.StatusNormalClosure && !errors.Is(err, context.Canceled) {
 			log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service %s: %v", configAddress, err)
+		} else {
+			log.Infof(stdcodes.ConfigServiceDisconnection, "disconnected from config service %s", configAddress)
 		}
 		b.lastFailedConnectionTime = time.Now()
 		b.disconnectChan <- struct{}{}

@@ -170,7 +170,7 @@ func ackEvent(client etp.Client, event string, data interface{}, bf backoff.Back
 		err = connClosedErr
 	}
 	if err != nil {
-		msg.err = fmt.Errorf("ack event to config service: %v", err)
+		msg.err = fmt.Errorf("ack event to config service: %w", err)
 		return msg
 	}
 
