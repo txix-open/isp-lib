@@ -407,7 +407,7 @@ func getActionKey(ctx *fasthttp.RequestCtx) string {
 	if err != nil {
 		unquoted = headerValue
 	}
-	return toKey(string(ctx.Request.URI().RequestURI()), unquoted)
+	return toKey(string(ctx.Request.URI().Path()), unquoted)
 }
 
 func toKey(uri, action string) string {
