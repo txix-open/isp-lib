@@ -126,6 +126,21 @@ func (b *runner) run() (ret error) {
 
 	go b.sendModuleConfigSchema() //create and send schema with default remote config
 
+	type remoteConfigApplyTask struct {
+		newCfg, oldCfg interface{}
+	}
+	remoteConfigsCh := make(chan remoteConfigApplyTask, 1)
+	go func() {
+		for {
+			select {
+			case <-b.ctx.Done():
+				return
+			case task := <-remoteConfigsCh:
+				callFunc(b.onRemoteConfigReceive, task.newCfg, task.oldCfg)
+			}
+		}
+	}()
+
 	b.moduleState = b.initialState()
 	remoteConfigTimeoutChan := time.After(defaultRemoteConfigAwaitTimeout) //used for log WARN message
 	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
@@ -150,7 +165,10 @@ func (b *runner) run() (ret error) {
 			}
 			oldRemoteConfig := b.remoteConfigPtr
 			if b.onRemoteConfigReceive != nil {
-				callFunc(b.onRemoteConfigReceive, newRemoteConfig, oldRemoteConfig)
+				remoteConfigsCh <- remoteConfigApplyTask{
+					newCfg: newRemoteConfig,
+					oldCfg: oldRemoteConfig,
+				}
 			}
 			b.remoteConfigPtr = newRemoteConfig
 
