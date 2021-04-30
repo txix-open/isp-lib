@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -26,7 +27,6 @@ import (
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
 	errors2 "github.com/pkg/errors"
-	"github.com/thecodeteam/goodbye"
 	"nhooyr.io/websocket"
 )
 
@@ -61,7 +61,10 @@ type runner struct {
 	connStrings              *RoundRobinStrings
 	lastFailedConnectionTime time.Time
 
-	ctx             context.Context
+	ctx                context.Context
+	cancelCtx          func()
+	shutdownRunnerOnce sync.Once
+
 	socketConfig    structure.SocketConfiguration
 	configAddresses []structure.AddressConfiguration
 }
@@ -83,6 +86,7 @@ func (t *moduleState) canSendModuleReady() bool {
 }
 
 func makeRunner(cfg bootstrapConfiguration) *runner {
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &runner{
 		bootstrapConfiguration: cfg,
 		remoteConfigChan:       make(chan []byte),
@@ -90,12 +94,12 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 		routesChan:             make(chan structure.RoutingConfig),
 		disconnectChan:         make(chan struct{}),
 		ackEventChan:           make(chan ackEventMsg),
+		ctx:                    ctx,
+		cancelCtx:              cancelCtx,
 	}
 }
 
 func (b *runner) run() (ret error) {
-	b.ctx = b.initShutdownHandler()
-
 	defer func() {
 		err := recover()
 		if err != nil {
@@ -239,14 +243,13 @@ func (b *runner) run() (ret error) {
 	}
 }
 
-func (b *runner) initShutdownHandler() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	goodbye.Notify(ctx)
-	goodbye.Register(func(ctx context.Context, sig os.Signal) {
+func (b *runner) onRunnerShutdown(ctx context.Context, sig os.Signal) {
+	b.shutdownRunnerOnce.Do(func() {
 		log.Info(stdcodes.ModuleManualShutdown, "module shutting down now")
 
-		cancel()
+		if cancel := b.cancelCtx; cancel != nil {
+			cancel()
+		}
 		if b.client != nil && !b.client.Closed() {
 			_ = b.client.Close()
 		}
@@ -257,8 +260,6 @@ func (b *runner) initShutdownHandler() context.Context {
 
 		log.Info(stdcodes.ModuleManualShutdown, "module has gracefully shut down")
 	})
-
-	return ctx
 }
 
 func (b *runner) initLocalConfig() {

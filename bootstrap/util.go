@@ -7,15 +7,19 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
+	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	etp "github.com/integration-system/isp-etp-go/v2/client"
 	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
+	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"nhooyr.io/websocket"
 )
@@ -208,4 +212,50 @@ func NewRoundRobinStrings(urls []string) *RoundRobinStrings {
 		strings: urls,
 		index:   -1,
 	}
+}
+
+type emptySignal struct {
+}
+
+var _ os.Signal = emptySignal{}
+
+func (s emptySignal) String() string {
+	return "nosignal"
+}
+
+func (s emptySignal) Signal() {
+}
+
+func gracefulShutdown(signalsCh chan os.Signal, finishedCh chan struct{}, onShutdown func(ctx context.Context, sig os.Signal)) {
+	const (
+		gracefulTimeout  = 3 * time.Second
+		terminateTimeout = 4 * time.Second
+	)
+	signal.Notify(signalsCh, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer signal.Stop(signalsCh)
+	sig := <-signalsCh
+	if _, empty := sig.(emptySignal); !empty {
+		log.Infof(stdcodes.ModuleManualShutdown, "received exit signal '%s'", sig)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-time.After(terminateTimeout):
+				log.Fatal(stdcodes.ModuleRunFatalError, "exit timeout reached: terminating")
+			case <-finishedCh:
+				return
+			case sig := <-signalsCh:
+				if _, empty := sig.(emptySignal); !empty {
+					log.Fatalf(stdcodes.ModuleRunFatalError, "received duplicate exit signal '%s': terminating", sig)
+				}
+			}
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), gracefulTimeout)
+	defer cancel()
+	onShutdown(ctx, sig)
+
+	close(finishedCh)
 }
