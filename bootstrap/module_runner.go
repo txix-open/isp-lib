@@ -323,8 +323,10 @@ func (b *runner) initSocketConnection() etp.Client {
 		connectionReadLimit = b.socketConfig.ConnectionReadLimitKB << 10
 	}
 	etpConfig := etp.Config{
-		HttpClient:          http.DefaultClient,
-		ConnectionReadLimit: connectionReadLimit,
+		ConnectionReadLimit:     connectionReadLimit,
+		HttpClient:              &http.Client{},
+		WorkersNum:              1,
+		WorkersBufferMultiplier: 1,
 	}
 	client := etp.NewClient(etpConfig)
 	client.OnDisconnect(func(err error) {
