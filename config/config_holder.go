@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	jsoniter "github.com/json-iterator/go"
@@ -30,8 +31,8 @@ const (
 )
 
 var (
-	configInstance       interface{}
-	remoteConfigInstance interface{}
+	configInstance       atomic.Value
+	remoteConfigInstance atomic.Value
 
 	startWatching  = sync.Once{}
 	onChangeFunc   interface{}
@@ -66,39 +67,40 @@ func init() {
 }
 
 func Get() interface{} {
-	return configInstance
+	return configInstance.Load()
 }
 
 func GetRemote() interface{} {
-	return remoteConfigInstance
+	return remoteConfigInstance.Load()
 }
 
 func UnsafeSetRemote(remoteConfig interface{}) {
-	remoteConfigInstance = remoteConfig
+	remoteConfigInstance.Store(remoteConfig)
 }
 
 func UnsafeSet(localConfig interface{}) {
-	configInstance = localConfig
+	configInstance.Store(localConfig)
 }
 
 func InitConfig(configuration interface{}) interface{} {
 	return InitConfigV2(configuration, false)
 }
 
-func InitConfigV2(configuration interface{}, callOnChangeHandler bool) interface{} {
-	if localConfig, err := readLocalConfig(configuration); err != nil {
+func InitConfigV2(localConfig interface{}, callOnChangeHandler bool) interface{} {
+	err := readLocalConfig(localConfig)
+	if err != nil {
 		log.Fatalf(stdcodes.ModuleReadLocalConfigError, "could not read local config: %v", err)
 		return nil
 	} else if err := validateConfig(localConfig); err != nil {
 		log.Fatalf(stdcodes.ModuleInvalidLocalConfig, "invalid local config: %v", err)
 		return nil
-	} else {
-		configInstance = localConfig
-		if callOnChangeHandler {
-			handleConfigChange(localConfig, nil)
-		}
 	}
-	return configInstance
+
+	configInstance.Store(localConfig)
+	if callOnChangeHandler {
+		handleConfigChange(localConfig, nil)
+	}
+	return localConfig
 }
 
 func InitRemoteConfig(configuration interface{}, remoteConfig []byte) (interface{}, error) {
@@ -119,17 +121,15 @@ func InitRemoteConfig(configuration interface{}, remoteConfig []byte) (interface
 	}
 	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
 	if err := json.Unmarshal(newRemoteConfig, newConfiguration); err != nil {
-		return nil,
-			fmt.Errorf("received invalid remote config: %v", err)
+		return nil, fmt.Errorf("received invalid remote config: %v", err)
 	}
 	if err := validateConfig(newConfiguration); err != nil {
-		return nil,
-			fmt.Errorf("received invalid remote config: %v", err)
+		return nil, fmt.Errorf("received invalid remote config: %v", err)
 	}
 
-	remoteConfigInstance = newConfiguration
+	remoteConfigInstance.Store(newConfiguration)
 
-	return remoteConfigInstance, nil
+	return newConfiguration, nil
 }
 
 // Example:
@@ -166,28 +166,29 @@ func OnConfigChange(f interface{}) {
 }
 
 func reloadConfig() {
-	old := deepcopy.Copy(configInstance)
-	newConfig, err := readLocalConfig(configInstance)
+	oldConfig := configInstance.Load()
+	newConfig := deepcopy.Copy(oldConfig)
+	err := readLocalConfig(newConfig)
 	if err != nil {
 		log.Errorf(stdcodes.ModuleReadLocalConfigError, "could not read local config: %v", err)
 		return
 	}
 	if err := validateConfig(newConfig); err != nil {
 		log.Errorf(stdcodes.ModuleInvalidLocalConfig, "invalid local config: %v", err)
-		configInstance = old
-	} else {
-		configInstance = newConfig
-		handleConfigChange(newConfig, old)
+		return
 	}
+
+	configInstance.Store(newConfig)
+	handleConfigChange(newConfig, oldConfig)
 }
 
-func readLocalConfig(config interface{}) (interface{}, error) {
+func readLocalConfig(config interface{}) error {
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("read local config file: %v", err)
+		return fmt.Errorf("read local config file: %v", err)
 	} else if err := viper.Unmarshal(config); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %v", err)
+		return fmt.Errorf("unmarshal config: %v", err)
 	}
-	return config, nil
+	return nil
 }
 
 func handleConfigChange(newConfig, oldConfig interface{}) {
