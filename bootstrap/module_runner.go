@@ -127,16 +127,37 @@ func (b *runner) run() (ret error) {
 	go b.sendModuleConfigSchema() //create and send schema with default remote config
 
 	type remoteConfigApplyTask struct {
-		newCfg, oldCfg interface{}
+		cfg    interface{}
+		rawCfg []byte
 	}
 	remoteConfigsCh := make(chan remoteConfigApplyTask, 1)
+	remoteConfigAppliedCh := make(chan struct{}, 1)
 	go func() {
 		for {
 			select {
 			case <-b.ctx.Done():
 				return
 			case task := <-remoteConfigsCh:
-				callFunc(b.onRemoteConfigReceive, task.newCfg, task.oldCfg)
+				oldRemoteConfig := b.remoteConfigPtr
+
+				if utils.DEV {
+					log.WithMetadata(log.Metadata{"config": string(task.rawCfg)}).
+						Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config, started applying")
+				} else {
+					log.Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config, started applying")
+				}
+
+				if b.onRemoteConfigReceive != nil {
+					callFunc(b.onRemoteConfigReceive, task.cfg, oldRemoteConfig)
+				}
+				log.Info(stdcodes.ConfigServiceReceiveConfiguration, "remote config applied")
+
+				config.UnsafeSetRemote(task.cfg)
+				b.remoteConfigPtr = task.cfg
+				select {
+				case remoteConfigAppliedCh <- struct{}{}:
+				default:
+				}
 			}
 		}
 	}()
@@ -159,28 +180,24 @@ func (b *runner) run() (ret error) {
 		select {
 		case data := <-b.remoteConfigChan:
 			oldConfigCopy := deepcopy.Copy(b.remoteConfigPtr)
-			newRemoteConfig, err := config.InitRemoteConfig(oldConfigCopy, data)
+			newRemoteConfig, rawCfg, err := config.PrepareRemoteConfig(oldConfigCopy, data)
 			if err != nil {
 				return err
 			}
-			oldRemoteConfig := b.remoteConfigPtr
-			if b.onRemoteConfigReceive != nil {
-				remoteConfigsCh <- remoteConfigApplyTask{
-					newCfg: newRemoteConfig,
-					oldCfg: oldRemoteConfig,
-				}
-			}
-			b.remoteConfigPtr = newRemoteConfig
-
-			b.moduleState.remoteConfigReady = true
-			if !b.moduleState.moduleReady {
-				go b.sendModuleRequirements() //after first time receiving config, send requirements
+			remoteConfigsCh <- remoteConfigApplyTask{
+				cfg:    newRemoteConfig,
+				rawCfg: rawCfg,
 			}
 
 			remoteConfigTimeoutChan = neverTriggerChan //stop flooding in logs
 		case <-remoteConfigTimeoutChan:
 			log.Error(stdcodes.RemoteConfigIsNotReceivedByTimeout, "remote config is not received by timeout")
 			remoteConfigTimeoutChan = time.After(defaultRemoteConfigAwaitTimeout)
+		case <-remoteConfigAppliedCh:
+			b.moduleState.remoteConfigReady = true
+			if !b.moduleState.moduleReady {
+				go b.sendModuleRequirements() //after first time receiving config, send requirements
+			}
 		case routers := <-b.routesChan:
 			if b.onRoutesReceive != nil {
 				b.moduleState.routesReady = b.onRoutesReceive(routers)

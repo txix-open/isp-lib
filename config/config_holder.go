@@ -90,10 +90,10 @@ func InitConfigV2(localConfig interface{}, callOnChangeHandler bool) interface{}
 	err := readLocalConfig(localConfig)
 	if err != nil {
 		log.Fatalf(stdcodes.ModuleReadLocalConfigError, "could not read local config: %v", err)
-		return nil
-	} else if err := validateConfig(localConfig); err != nil {
+	}
+	err = validateConfig(localConfig)
+	if err != nil {
 		log.Fatalf(stdcodes.ModuleInvalidLocalConfig, "invalid local config: %v", err)
-		return nil
 	}
 
 	configInstance.Store(localConfig)
@@ -103,33 +103,43 @@ func InitConfigV2(localConfig interface{}, callOnChangeHandler bool) interface{}
 	return localConfig
 }
 
+// Deprecated: use PrepareRemoteConfig and UnsafeSetRemote instead
 func InitRemoteConfig(configuration interface{}, remoteConfig []byte) (interface{}, error) {
-	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
+	newConfiguration, newRemoteConfig, err := PrepareRemoteConfig(configuration, remoteConfig)
 	if err != nil {
-		if utils.DEV {
-			return nil,
-				fmt.Errorf("could not override remote config via env: %v\nconfig=%s", err, string(remoteConfig))
-		} else {
-			return nil, errors.New("could not override remote config via env")
-		}
+		return nil, err
 	}
 	if utils.DEV {
 		log.WithMetadata(log.Metadata{"config": string(newRemoteConfig)}).
-			Debug(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
+			Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
 	} else {
 		log.Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config")
-	}
-	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
-	if err := json.Unmarshal(newRemoteConfig, newConfiguration); err != nil {
-		return nil, fmt.Errorf("received invalid remote config: %v", err)
-	}
-	if err := validateConfig(newConfiguration); err != nil {
-		return nil, fmt.Errorf("received invalid remote config: %v", err)
 	}
 
 	remoteConfigInstance.Store(newConfiguration)
 
 	return newConfiguration, nil
+}
+
+func PrepareRemoteConfig(configuration interface{}, remoteConfig []byte) (interface{}, []byte, error) {
+	newRemoteConfig, err := overrideConfigurationFromEnv(remoteConfig, RemoteConfigEnvPrefix)
+	if err != nil {
+		if utils.DEV {
+			return nil, nil, fmt.Errorf("could not override remote config via env: %v\nconfig=%s", err, remoteConfig)
+		} else {
+			return nil, nil, fmt.Errorf("could not override remote config via env: %v", err)
+		}
+	}
+
+	newConfiguration := reflect.New(reflect.TypeOf(configuration).Elem()).Interface()
+	if err := json.Unmarshal(newRemoteConfig, newConfiguration); err != nil {
+		return nil, nil, fmt.Errorf("received invalid remote config: %v", err)
+	}
+	if err := validateConfig(newConfiguration); err != nil {
+		return nil, nil, fmt.Errorf("received invalid remote config: %v", err)
+	}
+
+	return newConfiguration, newRemoteConfig, nil
 }
 
 // Example:

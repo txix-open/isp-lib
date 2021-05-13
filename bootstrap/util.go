@@ -228,8 +228,8 @@ func (s emptySignal) Signal() {
 
 func gracefulShutdown(signalsCh chan os.Signal, finishedCh chan struct{}, onShutdown func(ctx context.Context, sig os.Signal)) {
 	const (
-		gracefulTimeout  = 3 * time.Second
-		terminateTimeout = 4 * time.Second
+		gracefulTimeout  = 10 * time.Second
+		terminateTimeout = 11 * time.Second
 	)
 	signal.Notify(signalsCh, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 	defer signal.Stop(signalsCh)
