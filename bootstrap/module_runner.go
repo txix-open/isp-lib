@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -26,7 +27,6 @@ import (
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/mohae/deepcopy"
 	errors2 "github.com/pkg/errors"
-	"github.com/thecodeteam/goodbye"
 	"nhooyr.io/websocket"
 )
 
@@ -61,7 +61,10 @@ type runner struct {
 	connStrings              *RoundRobinStrings
 	lastFailedConnectionTime time.Time
 
-	ctx             context.Context
+	ctx                context.Context
+	cancelCtx          func()
+	shutdownRunnerOnce sync.Once
+
 	socketConfig    structure.SocketConfiguration
 	configAddresses []structure.AddressConfiguration
 }
@@ -83,6 +86,7 @@ func (t *moduleState) canSendModuleReady() bool {
 }
 
 func makeRunner(cfg bootstrapConfiguration) *runner {
+	ctx, cancelCtx := context.WithCancel(context.Background())
 	return &runner{
 		bootstrapConfiguration: cfg,
 		remoteConfigChan:       make(chan []byte),
@@ -90,12 +94,12 @@ func makeRunner(cfg bootstrapConfiguration) *runner {
 		routesChan:             make(chan structure.RoutingConfig),
 		disconnectChan:         make(chan struct{}),
 		ackEventChan:           make(chan ackEventMsg),
+		ctx:                    ctx,
+		cancelCtx:              cancelCtx,
 	}
 }
 
 func (b *runner) run() (ret error) {
-	b.ctx = b.initShutdownHandler()
-
 	defer func() {
 		err := recover()
 		if err != nil {
@@ -122,6 +126,42 @@ func (b *runner) run() (ret error) {
 
 	go b.sendModuleConfigSchema() //create and send schema with default remote config
 
+	type remoteConfigApplyTask struct {
+		cfg    interface{}
+		rawCfg []byte
+	}
+	remoteConfigsCh := make(chan remoteConfigApplyTask, 1)
+	remoteConfigAppliedCh := make(chan struct{}, 1)
+	go func() {
+		for {
+			select {
+			case <-b.ctx.Done():
+				return
+			case task := <-remoteConfigsCh:
+				oldRemoteConfig := b.remoteConfigPtr
+
+				if utils.DEV {
+					log.WithMetadata(log.Metadata{"config": string(task.rawCfg)}).
+						Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config, started applying")
+				} else {
+					log.Info(stdcodes.ConfigServiceReceiveConfiguration, "received remote config, started applying")
+				}
+
+				if b.onRemoteConfigReceive != nil {
+					callFunc(b.onRemoteConfigReceive, task.cfg, oldRemoteConfig)
+				}
+				log.Info(stdcodes.ConfigServiceReceiveConfiguration, "remote config applied")
+
+				config.UnsafeSetRemote(task.cfg)
+				b.remoteConfigPtr = task.cfg
+				select {
+				case remoteConfigAppliedCh <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}()
+
 	b.moduleState = b.initialState()
 	remoteConfigTimeoutChan := time.After(defaultRemoteConfigAwaitTimeout) //used for log WARN message
 	neverTriggerChan := make(chan time.Time)                               //used for stops log flood
@@ -140,25 +180,24 @@ func (b *runner) run() (ret error) {
 		select {
 		case data := <-b.remoteConfigChan:
 			oldConfigCopy := deepcopy.Copy(b.remoteConfigPtr)
-			newRemoteConfig, err := config.InitRemoteConfig(oldConfigCopy, data)
+			newRemoteConfig, rawCfg, err := config.PrepareRemoteConfig(oldConfigCopy, data)
 			if err != nil {
 				return err
 			}
-			oldRemoteConfig := b.remoteConfigPtr
-			if b.onRemoteConfigReceive != nil {
-				callFunc(b.onRemoteConfigReceive, newRemoteConfig, oldRemoteConfig)
-			}
-			b.remoteConfigPtr = newRemoteConfig
-
-			b.moduleState.remoteConfigReady = true
-			if !b.moduleState.moduleReady {
-				go b.sendModuleRequirements() //after first time receiving config, send requirements
+			remoteConfigsCh <- remoteConfigApplyTask{
+				cfg:    newRemoteConfig,
+				rawCfg: rawCfg,
 			}
 
 			remoteConfigTimeoutChan = neverTriggerChan //stop flooding in logs
 		case <-remoteConfigTimeoutChan:
 			log.Error(stdcodes.RemoteConfigIsNotReceivedByTimeout, "remote config is not received by timeout")
 			remoteConfigTimeoutChan = time.After(defaultRemoteConfigAwaitTimeout)
+		case <-remoteConfigAppliedCh:
+			b.moduleState.remoteConfigReady = true
+			if !b.moduleState.moduleReady {
+				go b.sendModuleRequirements() //after first time receiving config, send requirements
+			}
 		case routers := <-b.routesChan:
 			if b.onRoutesReceive != nil {
 				b.moduleState.routesReady = b.onRoutesReceive(routers)
@@ -193,7 +232,7 @@ func (b *runner) run() (ret error) {
 			}
 			go b.sendModuleReady()
 		case <-heartbeatCh.C:
-			if b.client == nil {
+			if b.client == nil || b.client.Closed() {
 				continue
 			}
 
@@ -215,7 +254,9 @@ func (b *runner) run() (ret error) {
 				}
 			} else {
 				md.Error(stdcodes.ConfigServiceSendDataError, msg.err)
-				_ = b.client.Close()
+				if !errors.As(msg.err, &websocket.CloseError{}) {
+					_ = b.client.Close()
+				}
 			}
 		case <-b.disconnectChan: //on disconnection, set state to 'not ready' once again
 			b.moduleState = b.initialState()
@@ -237,14 +278,13 @@ func (b *runner) run() (ret error) {
 	}
 }
 
-func (b *runner) initShutdownHandler() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	goodbye.Notify(ctx)
-	goodbye.Register(func(ctx context.Context, sig os.Signal) {
+func (b *runner) onRunnerShutdown(ctx context.Context, sig os.Signal) {
+	b.shutdownRunnerOnce.Do(func() {
 		log.Info(stdcodes.ModuleManualShutdown, "module shutting down now")
 
-		cancel()
+		if cancel := b.cancelCtx; cancel != nil {
+			cancel()
+		}
 		if b.client != nil && !b.client.Closed() {
 			_ = b.client.Close()
 		}
@@ -255,8 +295,6 @@ func (b *runner) initShutdownHandler() context.Context {
 
 		log.Info(stdcodes.ModuleManualShutdown, "module has gracefully shut down")
 	})
-
-	return ctx
 }
 
 func (b *runner) initLocalConfig() {
@@ -302,13 +340,17 @@ func (b *runner) initSocketConnection() etp.Client {
 		connectionReadLimit = b.socketConfig.ConnectionReadLimitKB << 10
 	}
 	etpConfig := etp.Config{
-		HttpClient:          http.DefaultClient,
-		ConnectionReadLimit: connectionReadLimit,
+		ConnectionReadLimit:     connectionReadLimit,
+		HttpClient:              &http.Client{},
+		WorkersNum:              1,
+		WorkersBufferMultiplier: 1,
 	}
 	client := etp.NewClient(etpConfig)
 	client.OnDisconnect(func(err error) {
 		if websocket.CloseStatus(err) != websocket.StatusNormalClosure && !errors.Is(err, context.Canceled) {
 			log.Errorf(stdcodes.ConfigServiceDisconnection, "disconnected from config service %s: %v", configAddress, err)
+		} else {
+			log.Infof(stdcodes.ConfigServiceDisconnection, "disconnected from config service %s", configAddress)
 		}
 		b.lastFailedConnectionTime = time.Now()
 		b.disconnectChan <- struct{}{}

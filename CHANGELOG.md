@@ -1,6 +1,11 @@
 ### Unreleased
-* fix http not implemented uri with query args 
+* http: fix 'not implemented' for uri with query args
 * bootstrap: fix error wrapping from govalidator when schema of remote config has required map field
+* bootstrap: fix closing new ws client instead of previous one that is already closed
+* bootstrap: rewrite graceful shutdown, correctly handle multiple shutdown signals, run module onShutdown even if received error from bootstrap runner
+* bootstrap: move processing new remote configuration to background routine with buffer 1 to prevent blocking of event loop in most cases
+* bootstrap: reduce websocket read buffer from 10 to 1
+* config: guard race access on local and remote configs with atomic
 ### v2.8.4
 * moved event entities to event-lib
 * fix jsonschema cross package definition collision

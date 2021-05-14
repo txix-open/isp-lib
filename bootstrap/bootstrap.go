@@ -2,13 +2,13 @@ package bootstrap
 
 import (
 	"errors"
+	"os"
 	"reflect"
 
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	"github.com/sirupsen/logrus"
-	"github.com/thecodeteam/goodbye"
 )
 
 const (
@@ -165,10 +165,14 @@ func (cfg *bootstrapConfiguration) OnModuleReady(f func()) *bootstrapConfigurati
 // starts module, block until interruption
 func (cfg *bootstrapConfiguration) Run() {
 	runner := makeRunner(*cfg)
-	defer func() {
-		goodbye.Exit(runner.ctx, 0)
-	}()
+
+	finishedCh := make(chan struct{})
+	signalsCh := make(chan os.Signal, 1)
+	go gracefulShutdown(signalsCh, finishedCh, runner.onRunnerShutdown)
+
 	err := runner.run()
+	signalsCh <- emptySignal{}
+	<-finishedCh
 	if err != nil {
 		//level `logrus.FatalLevel` will not lead to os.Exit()
 		log.Logf(logrus.FatalLevel, stdcodes.ModuleRunFatalError, "could not run module, fatal error occurred: %+v", err)

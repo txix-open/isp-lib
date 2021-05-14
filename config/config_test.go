@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 
 func TestRemoteConfigOverride(t *testing.T) {
 	assert := assert.New(t)
+	cleanupGlobals()
 
 	type Anon struct {
 		V string
@@ -53,6 +55,7 @@ func TestRemoteConfigOverride(t *testing.T) {
 
 func TestInitRemoteConfig(t *testing.T) {
 	assert := assert.New(t)
+	cleanupGlobals()
 
 	oldConfig, expectedConfig := getFirstConfData()
 	remoteConfig, err := json.Marshal(expectedConfig)
@@ -66,6 +69,7 @@ func TestInitRemoteConfig(t *testing.T) {
 	secOldConf, secExpConf := getSecondConfData()
 	secRemoteConf, err := json.Marshal(secExpConf)
 	assert.NoError(err)
+	cleanupGlobals()
 	ptr, err = InitRemoteConfig(secOldConf, secRemoteConf)
 	if err != nil {
 		t.Error(err)
@@ -117,4 +121,9 @@ func getSecondConfData() (oldConfig, newConfig interface{}) {
 		Varchar: "one",
 	}
 	return oldConfig, newConfig
+}
+
+func cleanupGlobals() {
+	configInstance = atomic.Value{}
+	remoteConfigInstance = atomic.Value{}
 }
