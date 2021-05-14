@@ -1,4 +1,4 @@
-### Unreleased
+### v2.8.5
 * http: fix 'not implemented' for uri with query args
 * bootstrap: fix error wrapping from govalidator when schema of remote config has required map field
 * bootstrap: fix closing new ws client instead of previous one that is already closed
