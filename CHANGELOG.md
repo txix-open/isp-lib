@@ -1,4 +1,4 @@
-### Unreleased
+### v2.8.6
 * bootstrap: deprecate instance_uuid; now it is not required to connect to the configuration service
 ### v2.8.5
 * http: fix 'not implemented' for uri with query args
