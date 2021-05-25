@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -27,7 +26,8 @@ const (
 
 	ModuleConnectionSuffix = "MODULE_CONNECTED"
 
-	ModuleNameGetParamKey   = "module_name"
+	ModuleNameGetParamKey = "module_name"
+	// Deprecated: no longer used.
 	InstanceUuidGetParamKey = "instance_uuid"
 	WsOkResponse            = "ok"
 )
@@ -36,18 +36,16 @@ func ModuleConnected(moduleName string) string {
 	return fmt.Sprintf("%s_%s", moduleName, ModuleConnectionSuffix)
 }
 
+// ParseParameters always return empty instanceUUID as it was deprecated.
 func ParseParameters(queryRaw string) (instanceUUID string, moduleName string, error error) {
 	parsedParams, _ := url.ParseQuery(queryRaw)
 	moduleName = parsedParams.Get(ModuleNameGetParamKey)
-	instanceUuid := parsedParams.Get(InstanceUuidGetParamKey)
-	if moduleName == "" || instanceUuid == "" || !IsValidUUID(instanceUuid) {
-		err := fmt.Sprintf("Not received all get parameters, %s: %s, %s: %s",
+	if moduleName == "" {
+		err := fmt.Errorf("not received all get parameters, %s: %s",
 			ModuleNameGetParamKey,
 			moduleName,
-			InstanceUuidGetParamKey,
-			instanceUuid,
 		)
-		return "", "", errors.New(err)
+		return "", "", err
 	}
-	return instanceUuid, moduleName, nil
+	return "", moduleName, nil
 }

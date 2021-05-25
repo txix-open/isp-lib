@@ -1,17 +1,19 @@
 package utils
 
 import (
+	"reflect"
+	"regexp"
+	"unicode"
+
 	"github.com/asaskevich/govalidator"
 	epb "google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"reflect"
-	"regexp"
-	"unicode"
 )
 
 var uuidRegex = regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
 
+// Deprecated: can validate only v1, v4. Use external lib for correct validation.
 func IsValidUUID(uuid string) bool {
 	return uuidRegex.MatchString(uuid)
 }
@@ -22,7 +24,6 @@ func WrapError(err error) error {
 }
 
 func CreateValidationErrorDetails(errorCode codes.Code, errorMessage string, errors map[string]string) error {
-
 	st := status.New(errorCode, errorMessage)
 	if errors != nil {
 		var violations = make([]*epb.BadRequest_FieldViolation, len(errors))
@@ -38,16 +39,15 @@ func CreateValidationErrorDetails(errorCode codes.Code, errorMessage string, err
 		}
 		ds, _ := st.WithDetails(&epb.BadRequest{FieldViolations: violations})
 		return ds.Err()
-	} else {
-		return st.Err()
 	}
+
+	return st.Err()
 }
 
 func CreateValidationErrorDetailsV2(errorCode codes.Code, errorMessage string, detailsPairs ...string) error {
 	l := len(detailsPairs)
 	if l == 0 || l%2 != 0 {
 		panic("detailsPairs: expecting pairs of field name and error")
-		return nil
 	}
 
 	errors := make(map[string]string, l/2)
