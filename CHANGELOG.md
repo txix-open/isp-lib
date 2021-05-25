@@ -1,3 +1,5 @@
+### Unreleased
+* bootstrap: deprecate instance_uuid; now it is not required to connect to the configuration service
 ### v2.8.5
 * http: fix 'not implemented' for uri with query args
 * bootstrap: fix error wrapping from govalidator when schema of remote config has required map field
