@@ -12,15 +12,14 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	jsoniter "github.com/json-iterator/go"
-
-	log "github.com/integration-system/isp-log"
-	"github.com/integration-system/isp-log/stdcodes"
-
 	"github.com/asaskevich/govalidator"
 	"github.com/fsnotify/fsnotify"
 	"github.com/integration-system/bellows"
+	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/mohae/deepcopy"
 	"github.com/spf13/viper"
 )
@@ -275,4 +274,9 @@ func overrideConfigurationFromEnv(src []byte, envPrefix string) ([]byte, error) 
 	}
 
 	return bytes, nil
+}
+
+type CommonLocalConfig struct {
+	ModuleName           string                         `valid:"required~Required"`
+	ConfigServiceAddress structure.AddressConfiguration `valid:"required~Required"`
 }
