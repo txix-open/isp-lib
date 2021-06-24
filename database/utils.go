@@ -50,7 +50,6 @@ func ResolveMigrationsDirectory() string {
 	ex, _ := os.Executable()
 	migrationDir := "migrations"
 	if !utils.DEV {
-		// _, filename, _, _ := runtime.Caller(0)
 		migrationDir = path.Dir(ex) + "/" + migrationDir
 	}
 	if utils.EnvMigrationPath != "" {
@@ -92,9 +91,16 @@ func ensureMigrations(config structure.DBConfiguration) error {
 	migrationDir := ResolveMigrationsDirectory()
 
 	if _, err := os.Stat(migrationDir); !os.IsNotExist(err) {
-		goose.Version(db, migrationDir)
-		goose.Status(db, migrationDir)
-		if err := goose.Run("up", db, migrationDir); err != nil {
+		err := goose.Version(db, migrationDir)
+		if err != nil {
+			return err
+		}
+		err = goose.Status(db, migrationDir)
+		if err != nil {
+			return err
+		}
+		err = goose.Up(db, migrationDir)
+		if err != nil {
 			return err
 		}
 	} else {
