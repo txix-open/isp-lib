@@ -20,6 +20,7 @@ import (
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/mitchellh/mapstructure"
 	"github.com/mohae/deepcopy"
 	"github.com/spf13/viper"
 )
@@ -192,9 +193,12 @@ func reloadConfig() {
 }
 
 func readLocalConfig(config interface{}) error {
+	squashStructsDecoderOption := func(dc *mapstructure.DecoderConfig) {
+		dc.Squash = true
+	}
 	if err := viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("read local config file: %v", err)
-	} else if err := viper.Unmarshal(config); err != nil {
+	} else if err := viper.Unmarshal(config, squashStructsDecoderOption); err != nil {
 		return fmt.Errorf("unmarshal config: %v", err)
 	}
 	return nil
