@@ -1,3 +1,8 @@
+### v2.8.7
+* database: set dial, read, write timeouts
+* database: handle errors in migrations
+* config: add common local config
+* config: fix unmarshaling embedded structs in local configs
 ### v2.8.6
 * bootstrap: deprecate instance_uuid; now it is not required to connect to the configuration service
 ### v2.8.5
