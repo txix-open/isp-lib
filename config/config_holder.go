@@ -12,15 +12,15 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	jsoniter "github.com/json-iterator/go"
-
-	log "github.com/integration-system/isp-log"
-	"github.com/integration-system/isp-log/stdcodes"
-
 	"github.com/asaskevich/govalidator"
 	"github.com/fsnotify/fsnotify"
 	"github.com/integration-system/bellows"
+	"github.com/integration-system/isp-lib/v2/structure"
 	"github.com/integration-system/isp-lib/v2/utils"
+	log "github.com/integration-system/isp-log"
+	"github.com/integration-system/isp-log/stdcodes"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/mitchellh/mapstructure"
 	"github.com/mohae/deepcopy"
 	"github.com/spf13/viper"
 )
@@ -193,9 +193,12 @@ func reloadConfig() {
 }
 
 func readLocalConfig(config interface{}) error {
+	squashStructsDecoderOption := func(dc *mapstructure.DecoderConfig) {
+		dc.Squash = true
+	}
 	if err := viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("read local config file: %v", err)
-	} else if err := viper.Unmarshal(config); err != nil {
+	} else if err := viper.Unmarshal(config, squashStructsDecoderOption); err != nil {
 		return fmt.Errorf("unmarshal config: %v", err)
 	}
 	return nil
@@ -275,4 +278,9 @@ func overrideConfigurationFromEnv(src []byte, envPrefix string) ([]byte, error) 
 	}
 
 	return bytes, nil
+}
+
+type CommonLocalConfig struct {
+	ModuleName           string                         `valid:"required~Required"`
+	ConfigServiceAddress structure.AddressConfiguration `valid:"required~Required"`
 }
