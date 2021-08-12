@@ -258,7 +258,7 @@ func handleError(err error, method string) error {
 		log.WithMetadata(log.Metadata{"method": method}).
 			Debugf(stdcodes.ModuleInternalGrpcServiceError, "%+v", err)
 	}
-	return grpcError.Err()
+	return grpcError
 }
 
 func readBody(msg *isp.Message, ptr interface{}) error {
