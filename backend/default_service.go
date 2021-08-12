@@ -16,6 +16,7 @@ import (
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
+	pkgerrors "github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -52,9 +53,9 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	defer func() {
 		err := recover()
 		if err != nil {
-			debug.PrintStack()
 			log.WithMetadata(log.Metadata{"method": c.method}).
-				Error(stdcodes.ModuleInternalGrpcServiceError, err)
+				Errorf(stdcodes.ModuleInternalGrpcServiceError, "recovered panic from request: %v", err)
+			debug.PrintStack()
 		}
 
 		for _, p := range df.pps {
@@ -116,7 +117,15 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 	if err != nil {
 		return err
 	}
-	err = function.consume(stream, md)
+	func() {
+		defer func() {
+			recovered := recover()
+			if recovered != nil {
+				err = pkgerrors.WithStack(fmt.Errorf("recovered panic from stream handler: %v", recovered))
+			}
+		}()
+		err = function.consume(stream, md)
+	}()
 	if err != nil {
 		return handleError(err, function.methodName)
 	}
@@ -242,11 +251,12 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 func handleError(err error, method string) error {
 	grpcError, mustLog := ResolveError(err)
 	if mustLog {
+		// "%+v" format to expand stacktrace from pkgerrors.WithStack
 		log.WithMetadata(log.Metadata{"method": method}).
-			Error(stdcodes.ModuleInternalGrpcServiceError, err)
+			Errorf(stdcodes.ModuleInternalGrpcServiceError, "%+v", err)
 	} else if utils.DEV {
 		log.WithMetadata(log.Metadata{"method": method}).
-			Debug(stdcodes.ModuleInternalGrpcServiceError, err)
+			Debugf(stdcodes.ModuleInternalGrpcServiceError, "%+v", err)
 	}
 	return grpcError.Err()
 }
