@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var defaultInternalStatusErr = status.New(codes.Internal, utils.ServiceError).Err()
+
 func ResolveBody(msg *isp.Message) *proto.Value {
 	list := msg.GetListBody()
 	st := msg.GetStructBody()
@@ -45,12 +47,12 @@ func WrapBody(value *proto.Value) *isp.Message {
 	return result
 }
 
-func ResolveError(err error) (s *status.Status, ok bool) {
+func ResolveError(err error) (_ error, mustLog bool) {
 	s, isGrpcErr := status.FromError(err)
 	if isGrpcErr {
-		return s, false
+		return s.Err(), false
 	}
-	return status.New(codes.Internal, utils.ServiceError), true
+	return defaultInternalStatusErr, true
 }
 
 func validate(ctx RequestCtx, mappedRequestBody interface{}) error {

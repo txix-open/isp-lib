@@ -1,10 +1,12 @@
 package backend
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/streaming"
+	pkgerrors "github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -38,7 +40,13 @@ func (f function) unmarshalAndValidateInputData(msg *isp.Message, ctx *ctx, vali
 	return nil, nil
 }
 
-func (f function) call(dataParam interface{}, md metadata.MD) (interface{}, error) {
+func (f function) call(dataParam interface{}, md metadata.MD) (_ interface{}, err error) {
+	defer func() {
+		recovered := recover()
+		if recovered != nil {
+			err = pkgerrors.WithStack(fmt.Errorf("recovered panic from handler: %v", recovered))
+		}
+	}()
 	var argCount int
 	if f.mdParamNum > f.dataParamNum {
 		argCount = f.mdParamNum + 1
@@ -57,7 +65,6 @@ func (f function) call(dataParam interface{}, md metadata.MD) (interface{}, erro
 
 	l := len(res)
 	var result interface{}
-	var err error
 	for i := 0; i < l; i++ {
 		v := res[i]
 		if e, ok := v.Interface().(error); ok && err == nil {
