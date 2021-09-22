@@ -2,8 +2,6 @@ package backend
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"path"
 	"reflect"
 	"runtime/debug"
@@ -16,7 +14,7 @@ import (
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -122,7 +120,7 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 		defer func() {
 			recovered := recover()
 			if recovered != nil {
-				err = pkgerrors.WithStack(fmt.Errorf("recovered panic from stream handler: %v", recovered))
+				err = errors.WithStack(errors.Errorf("recovered panic from stream handler: %v", recovered))
 			}
 		}()
 		err = function.consume(stream, md)
@@ -252,7 +250,7 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 func handleError(err error, method string) error {
 	grpcError, mustLog := ResolveError(err)
 	if mustLog {
-		// "%+v" format to expand stacktrace from pkgerrors.WithStack
+		// "%+v" format to expand stacktrace from errors.WithStack
 		log.WithMetadata(log.Metadata{"method": method}).
 			Errorf(stdcodes.ModuleInternalGrpcServiceError, "%+v", err)
 	} else if utils.DEV {
@@ -337,7 +335,7 @@ func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (m
 		value := reflect.ValueOf(descriptor.Handler)
 		if f := getStreamConsumer(descriptor.Handler); f != nil {
 			if _, present := streamHandlers[descriptor.Path]; present {
-				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+				return nil, nil, errors.Errorf("duplicate method handlers for method: %s", descriptor.Path)
 			}
 			streamHandlers[descriptor.Path] = streamFunction{
 				methodName: descriptor.Path,
@@ -346,11 +344,11 @@ func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (m
 		} else {
 			f, err := getFunction(value.Type(), value)
 			if err != nil {
-				return nil, nil, fmt.Errorf("invalid function for method %s: %v", descriptor.Path, err)
+				return nil, nil, errors.Errorf("invalid function for method %s: %v", descriptor.Path, err)
 			}
 
 			if _, present := functions[descriptor.Path]; present {
-				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+				return nil, nil, errors.Errorf("duplicate method handlers for method: %s", descriptor.Path)
 			}
 			f.methodName = descriptor.Path
 			functions[descriptor.Path] = f
@@ -395,7 +393,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 						}
 
 						if _, present := functions[key]; present {
-							return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", key)
+							return nil, nil, errors.Errorf("duplicate method handlers for method: %s", key)
 
 						}
 						f.methodName = key

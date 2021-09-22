@@ -2,12 +2,11 @@ package backend
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/streaming"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -47,7 +46,7 @@ func (f function) call(ctx context.Context, dataParam interface{}, md metadata.M
 	defer func() {
 		recovered := recover()
 		if recovered != nil {
-			err = pkgerrors.WithStack(fmt.Errorf("recovered panic from handler: %v", recovered))
+			err = errors.WithStack(errors.Errorf("recovered panic from handler: %v", recovered))
 		}
 	}()
 	args := make([]reflect.Value, f.paramsCount)

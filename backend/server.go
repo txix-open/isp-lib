@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"errors"
 	"net"
 	"sync"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/integration-system/isp-lib/v2/structure"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
