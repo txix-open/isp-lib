@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -40,7 +41,7 @@ func (f function) unmarshalAndValidateInputData(msg *isp.Message, ctx *ctx, vali
 	return nil, nil
 }
 
-func (f function) call(dataParam interface{}, md metadata.MD) (_ interface{}, err error) {
+func (f function) call(ctx context.Context, dataParam interface{}, md metadata.MD) (_ interface{}, err error) { // todo ctx context.Context
 	defer func() {
 		recovered := recover()
 		if recovered != nil {

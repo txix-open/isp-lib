@@ -80,10 +80,10 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	if err == nil {
 		if df.interceptor != nil {
 			result, err = df.interceptor(c, func() (interface{}, error) {
-				return handler.call(dataParam, md)
+				return handler.call(ctx, dataParam, md)
 			})
 		} else {
-			result, err = handler.call(dataParam, md)
+			result, err = handler.call(ctx, dataParam, md)
 		}
 	}
 
