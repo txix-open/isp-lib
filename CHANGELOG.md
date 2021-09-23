@@ -1,3 +1,6 @@
+### v2.9.0
+* backend: add context to grpc signature
+* backend: remove excessive checks for func params
 ### v2.8.7
 * database: set dial, read, write timeouts
 * database: handle errors in migrations

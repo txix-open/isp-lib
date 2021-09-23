@@ -2,8 +2,6 @@ package backend
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"path"
 	"reflect"
 	"runtime/debug"
@@ -16,7 +14,7 @@ import (
 	"github.com/integration-system/isp-lib/v2/utils"
 	log "github.com/integration-system/isp-log"
 	"github.com/integration-system/isp-log/stdcodes"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -31,8 +29,9 @@ type PostProcessor func(ctx RequestCtx)
 type Validator func(ctx RequestCtx, mappedRequestBody interface{}) error
 
 var (
-	metaDataType = reflect.TypeOf(metadata.MD{})
-	emptyBody    = &isp.Message{
+	contextInterface = reflect.TypeOf((*context.Context)(nil)).Elem()
+	metaDataType     = reflect.TypeOf(metadata.MD{})
+	emptyBody        = &isp.Message{
 		Body: &isp.Message_NullBody{
 			NullBody: proto.NullValue_NULL_VALUE,
 		},
@@ -80,10 +79,10 @@ func (df *DefaultService) Request(ctx context.Context, msg *isp.Message) (*isp.M
 	if err == nil {
 		if df.interceptor != nil {
 			result, err = df.interceptor(c, func() (interface{}, error) {
-				return handler.call(dataParam, md)
+				return handler.call(ctx, dataParam, md)
 			})
 		} else {
-			result, err = handler.call(dataParam, md)
+			result, err = handler.call(ctx, dataParam, md)
 		}
 	}
 
@@ -121,7 +120,7 @@ func (df *DefaultService) RequestStream(stream isp.BackendService_RequestStreamS
 		defer func() {
 			recovered := recover()
 			if recovered != nil {
-				err = pkgerrors.WithStack(fmt.Errorf("recovered panic from stream handler: %v", recovered))
+				err = errors.WithStack(errors.Errorf("recovered panic from stream handler: %v", recovered))
 			}
 		}()
 		err = function.consume(stream, md)
@@ -251,7 +250,7 @@ func GetEndpointConfig(methodPrefix string, f reflect.StructField) structure.End
 func handleError(err error, method string) error {
 	grpcError, mustLog := ResolveError(err)
 	if mustLog {
-		// "%+v" format to expand stacktrace from pkgerrors.WithStack
+		// "%+v" format to expand stacktrace from errors.WithStack
 		log.WithMetadata(log.Metadata{"method": method}).
 			Errorf(stdcodes.ModuleInternalGrpcServiceError, "%+v", err)
 	} else if utils.DEV {
@@ -284,27 +283,30 @@ func toBytes(data interface{}) (*isp.Message, error) {
 }
 
 func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
-	var fun = function{}
-	inParamsCount := fType.NumIn()
-	if inParamsCount > 2 {
-		return fun, errors.New("expected 2 or less params: ([md] [data])")
+	if fType.Kind() != reflect.Func {
+		return function{}, errors.Errorf("expecting func, but got unexpected type: %v", fType.Kind())
 	}
-	fun.dataParamNum = -1
-	fun.mdParamNum = -1
+	inParamsCount := fType.NumIn()
+	if inParamsCount > 3 {
+		return function{}, errors.New("expected 3 or less params: ([ctx] [md] [data])")
+	}
+
+	var fun = function{
+		paramsCount:  inParamsCount,
+		dataParamNum: -1,
+		mdParamNum:   -1,
+		ctxParamNum:  -1,
+	}
 	for i := 0; i < inParamsCount; i++ {
 		param := fType.In(i)
 
-		switch param.Kind() {
-		case reflect.Func:
-			return fun, errors.New("unexpected func param: function")
-		case reflect.Interface:
-			return fun, errors.New("unexpected func param: interface")
-		}
-
-		if param.ConvertibleTo(metaDataType) {
+		switch {
+		case param.ConvertibleTo(contextInterface):
+			fun.ctxParamNum = i
+		case param.ConvertibleTo(metaDataType):
 			fun.mdParamNum = i
 			fun.mdParamType = param
-		} else {
+		default:
 			fun.dataParamNum = i
 			fun.dataParamType = param
 		}
@@ -336,7 +338,7 @@ func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (m
 		value := reflect.ValueOf(descriptor.Handler)
 		if f := getStreamConsumer(descriptor.Handler); f != nil {
 			if _, present := streamHandlers[descriptor.Path]; present {
-				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+				return nil, nil, errors.Errorf("duplicate method handlers for method: %s", descriptor.Path)
 			}
 			streamHandlers[descriptor.Path] = streamFunction{
 				methodName: descriptor.Path,
@@ -345,11 +347,11 @@ func resolveHandlersByDescriptors(descriptors []structure.EndpointDescriptor) (m
 		} else {
 			f, err := getFunction(value.Type(), value)
 			if err != nil {
-				return nil, nil, fmt.Errorf("invalid function for method %s: %v", descriptor.Path, err)
+				return nil, nil, errors.Errorf("invalid function for method %s: %v", descriptor.Path, err)
 			}
 
 			if _, present := functions[descriptor.Path]; present {
-				return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", descriptor.Path)
+				return nil, nil, errors.Errorf("duplicate method handlers for method: %s", descriptor.Path)
 			}
 			f.methodName = descriptor.Path
 			functions[descriptor.Path] = f
@@ -394,7 +396,7 @@ func resolveHandlers(methodPrefix string, handlersStructs ...interface{}) (map[s
 						}
 
 						if _, present := functions[key]; present {
-							return nil, nil, fmt.Errorf("duplicate method handlers for method: %s", key)
+							return nil, nil, errors.Errorf("duplicate method handlers for method: %s", key)
 
 						}
 						f.methodName = key
