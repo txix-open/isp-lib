@@ -284,13 +284,16 @@ func toBytes(data interface{}) (*isp.Message, error) {
 }
 
 func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
-	var fun = function{}
 	inParamsCount := fType.NumIn()
 	if inParamsCount > 2 {
 		return fun, errors.New("expected 2 or less params: ([md] [data])")
 	}
-	fun.dataParamNum = -1
-	fun.mdParamNum = -1
+
+	var fun = function{
+		paramsCount:  inParamsCount,
+		dataParamNum: -1,
+		mdParamNum:   -1,
+	}
 	for i := 0; i < inParamsCount; i++ {
 		param := fType.In(i)
 

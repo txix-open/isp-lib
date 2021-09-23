@@ -18,6 +18,7 @@ type function struct {
 	mdParamType   reflect.Type
 	mdParamNum    int
 	dataParamNum  int
+	paramsCount   int
 	fun           reflect.Value
 	methodName    string
 }
@@ -48,13 +49,7 @@ func (f function) call(ctx context.Context, dataParam interface{}, md metadata.M
 			err = pkgerrors.WithStack(fmt.Errorf("recovered panic from handler: %v", recovered))
 		}
 	}()
-	var argCount int
-	if f.mdParamNum > f.dataParamNum {
-		argCount = f.mdParamNum + 1
-	} else {
-		argCount = f.dataParamNum + 1
-	}
-	args := make([]reflect.Value, argCount)
+	args := make([]reflect.Value, f.paramsCount)
 	if f.mdParamNum != -1 {
 		args[f.mdParamNum] = reflect.ValueOf(md).Convert(f.mdParamType)
 	}
