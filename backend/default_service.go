@@ -297,13 +297,6 @@ func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	for i := 0; i < inParamsCount; i++ {
 		param := fType.In(i)
 
-		switch param.Kind() {
-		case reflect.Func:
-			return fun, errors.New("unexpected func param: function")
-		case reflect.Interface:
-			return fun, errors.New("unexpected func param: interface")
-		}
-
 		if param.ConvertibleTo(metaDataType) {
 			fun.mdParamNum = i
 			fun.mdParamType = param
