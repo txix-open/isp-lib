@@ -31,8 +31,9 @@ type PostProcessor func(ctx RequestCtx)
 type Validator func(ctx RequestCtx, mappedRequestBody interface{}) error
 
 var (
-	metaDataType = reflect.TypeOf(metadata.MD{})
-	emptyBody    = &isp.Message{
+	contextInterface = reflect.TypeOf((*context.Context)(nil)).Elem()
+	metaDataType     = reflect.TypeOf(metadata.MD{})
+	emptyBody        = &isp.Message{
 		Body: &isp.Message_NullBody{
 			NullBody: proto.NullValue_NULL_VALUE,
 		},
@@ -285,22 +286,26 @@ func toBytes(data interface{}) (*isp.Message, error) {
 
 func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
 	inParamsCount := fType.NumIn()
-	if inParamsCount > 2 {
-		return fun, errors.New("expected 2 or less params: ([md] [data])")
+	if inParamsCount > 3 {
+		return function{}, errors.New("expected 3 or less params: ([ctx] [md] [data])")
 	}
 
 	var fun = function{
 		paramsCount:  inParamsCount,
 		dataParamNum: -1,
 		mdParamNum:   -1,
+		ctxParamNum:  -1,
 	}
 	for i := 0; i < inParamsCount; i++ {
 		param := fType.In(i)
 
-		if param.ConvertibleTo(metaDataType) {
+		switch {
+		case param.ConvertibleTo(contextInterface):
+			fun.ctxParamNum = i
+		case param.ConvertibleTo(metaDataType):
 			fun.mdParamNum = i
 			fun.mdParamType = param
-		} else {
+		default:
 			fun.dataParamNum = i
 			fun.dataParamType = param
 		}

@@ -16,6 +16,7 @@ import (
 type function struct {
 	dataParamType reflect.Type
 	mdParamType   reflect.Type
+	ctxParamNum   int
 	mdParamNum    int
 	dataParamNum  int
 	paramsCount   int
@@ -55,6 +56,9 @@ func (f function) call(ctx context.Context, dataParam interface{}, md metadata.M
 	}
 	if f.dataParamNum != -1 && dataParam != nil {
 		args[f.dataParamNum] = reflect.ValueOf(dataParam).Elem()
+	}
+	if f.ctxParamNum != -1 {
+		args[f.ctxParamNum] = reflect.ValueOf(ctx)
 	}
 
 	res := f.fun.Call(args)
