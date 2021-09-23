@@ -283,6 +283,9 @@ func toBytes(data interface{}) (*isp.Message, error) {
 }
 
 func getFunction(fType reflect.Type, fValue reflect.Value) (function, error) {
+	if fType.Kind() != reflect.Func {
+		return function{}, errors.Errorf("expecting func, but got unexpected type: %v", fType.Kind())
+	}
 	inParamsCount := fType.NumIn()
 	if inParamsCount > 3 {
 		return function{}, errors.New("expected 3 or less params: ([ctx] [md] [data])")
