@@ -3,6 +3,7 @@ package scripts
 import (
 	"bytes"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dop251/goja"
@@ -41,7 +42,9 @@ func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interfa
 		o(config)
 	}
 	var timer *time.Timer
+	isAlive := int32(1)
 	defer func() {
+		atomic.StoreInt32(&isAlive, 0)
 		timer.Stop()
 		vm.ClearInterrupt()
 		m.pool.Put(vm)
@@ -51,7 +54,9 @@ func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interfa
 	defer config.unset(vm)
 
 	timer = time.AfterFunc(config.scriptTimeout, func() {
-		vm.Interrupt("execution timeout")
+		if atomic.LoadInt32(&isAlive) == 1 {
+			vm.Interrupt("execution timeout")
+		}
 	})
 	res, err := vm.RunProgram(s.prog)
 	if err != nil {
