@@ -6,7 +6,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20180315120708-ccb8e960c48f
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/cenkalti/backoff/v4 v4.1.0
-	github.com/dop251/goja v0.0.0-20210427212725-462d53687b0d
+	github.com/dop251/goja v0.0.0-20211011172007-d99e4b8cbf48
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-pg/pg/v9 v9.2.1
 	github.com/go-redis/redis/v8 v8.8.2
@@ -35,6 +35,7 @@ require (
 	github.com/swaggo/http-swagger v1.0.0
 	github.com/swaggo/swag v1.7.0
 	github.com/valyala/fasthttp v1.24.0
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
