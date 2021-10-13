@@ -11,7 +11,6 @@ type ExecOption func(opt *configOptions)
 
 type configOptions struct {
 	scriptTimeout   time.Duration
-	timer           *time.Timer
 	arg             interface{}
 	logBuf          *bytes.Buffer
 	data            map[string]interface{}

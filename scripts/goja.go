@@ -40,11 +40,11 @@ func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interfa
 	for _, o := range opts {
 		o(config)
 	}
-	config.timer = time.AfterFunc(config.scriptTimeout, func() {
+	timer := time.AfterFunc(config.scriptTimeout, func() {
 		vm.Interrupt("execution timeout")
 	})
 	defer func() {
-		config.timer.Stop()
+		timer.Stop()
 		vm.ClearInterrupt()
 		m.pool.Put(vm)
 	}()
