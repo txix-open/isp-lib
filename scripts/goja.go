@@ -40,9 +40,7 @@ func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interfa
 	for _, o := range opts {
 		o(config)
 	}
-	timer := time.AfterFunc(config.scriptTimeout, func() {
-		vm.Interrupt("execution timeout")
-	})
+	var timer *time.Timer
 	defer func() {
 		timer.Stop()
 		vm.ClearInterrupt()
@@ -52,6 +50,9 @@ func (m *Engine) Execute(s Script, arg interface{}, opts ...ExecOption) (interfa
 	config.set(vm)
 	defer config.unset(vm)
 
+	timer = time.AfterFunc(config.scriptTimeout, func() {
+		vm.Interrupt("execution timeout")
+	})
 	res, err := vm.RunProgram(s.prog)
 	if err != nil {
 		return nil, castErr(err)
