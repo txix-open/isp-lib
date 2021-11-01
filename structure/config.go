@@ -3,16 +3,7 @@ package structure
 import (
 	"encoding/json"
 	"net"
-
-	"github.com/integration-system/isp-event-lib/client/nats"
-	"github.com/integration-system/isp-event-lib/mq"
 )
-
-// DEPRECATED
-type RabbitConfig = mq.Config
-
-// DEPRECATED
-type NatsConfig = nats.Config
 
 type MetricAddress struct {
 	AddressConfiguration
