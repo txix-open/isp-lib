@@ -1,3 +1,6 @@
+### v2.10.0
+* remove isp-event-lib dependency
+* remove nats client
 ### v2.9.0
 * backend: add context to grpc signature
 * backend: remove excessive checks for func params
