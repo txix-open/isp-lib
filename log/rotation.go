@@ -43,11 +43,11 @@ func rotationToUrl(r Rotation) url.URL {
 		"maxBackups": {strconv.Itoa(r.MaxBackups)},
 		"compress":   {strconv.FormatBool(r.Compress)},
 	}
-	url := url.URL{
+	u := url.URL{
 		Scheme:   lumberjackSchema,
 		RawQuery: values.Encode(),
 	}
-	return url
+	return u
 }
 
 func rotationFromUrl(u *url.URL) (*Rotation, error) {
@@ -56,19 +56,19 @@ func rotationFromUrl(u *url.URL) (*Rotation, error) {
 		return nil, errors.Wrap(err, "parse lumberjack params")
 	}
 	file := values.Get("file")
-	maxSizeMb, err := strconv.Atoi("maxSizeMb")
+	maxSizeMb, err := strconv.Atoi(values.Get("maxSizeMb"))
 	if err != nil {
 		return nil, errors.Wrap(err, "parse maxSizeMb")
 	}
-	maxDays, err := strconv.Atoi("maxDays")
+	maxDays, err := strconv.Atoi(values.Get("maxDays"))
 	if err != nil {
 		return nil, errors.Wrap(err, "parse maxDays")
 	}
-	maxBackups, err := strconv.Atoi("maxBackups")
+	maxBackups, err := strconv.Atoi(values.Get("maxBackups"))
 	if err != nil {
 		return nil, errors.Wrap(err, "parse maxBackups")
 	}
-	compress, err := strconv.ParseBool("compress")
+	compress, err := strconv.ParseBool(values.Get("compress"))
 	if err != nil {
 		return nil, errors.Wrap(err, "parse compress")
 	}

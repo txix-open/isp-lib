@@ -13,7 +13,7 @@ type Validator interface {
 	Validate(ctx context.Context, value interface{}) (bool, map[string]string)
 }
 
-type Local struct {
+type Config struct {
 	cfg *viper.Viper
 
 	validator Validator
@@ -21,8 +21,8 @@ type Local struct {
 	envPrefix string
 }
 
-func NewLocal(opts ...LocalOption) (*Local, error) {
-	local := &Local{}
+func New(opts ...LocalOption) (*Config, error) {
+	local := &Config{}
 	for _, opt := range opts {
 		opt(local)
 	}
@@ -49,19 +49,19 @@ func NewLocal(opts ...LocalOption) (*Local, error) {
 	return local, nil
 }
 
-func (l *Local) Set(key string, value interface{}) {
+func (l *Config) Set(key string, value interface{}) {
 	l.cfg.Set(key, value)
 }
 
-func (l Local) Get(key string) interface{} {
+func (l Config) Get(key string) interface{} {
 	return l.cfg.Get(key)
 }
 
-func (l Local) GetString(key string) string {
+func (l Config) GetString(key string) string {
 	return l.cfg.GetString(key)
 }
 
-func (l Local) Read(ctx context.Context, ptr interface{}) error {
+func (l Config) Read(ctx context.Context, ptr interface{}) error {
 	err := l.cfg.Unmarshal(&ptr)
 	if err != nil {
 		return errors.Wrap(err, "unmarshal config")

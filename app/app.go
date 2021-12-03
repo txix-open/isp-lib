@@ -11,7 +11,6 @@ import (
 	"github.com/integration-system/isp-lib/v3/log"
 	"github.com/integration-system/isp-lib/v3/validator"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,7 +24,7 @@ type Closer interface {
 
 type Application struct {
 	ctx    context.Context
-	cfg    *config.Local
+	cfg    *config.Config
 	logger *log.Adapter
 
 	group   *errgroup.Group
@@ -49,7 +48,7 @@ func New() *Application {
 	}
 	localConfigOpts = append(localConfigOpts, config.WithReadingFromFile(cfgFile))
 
-	cfg, err := config.NewLocal(localConfigOpts...)
+	cfg, err := config.New(localConfigOpts...)
 	if err != nil {
 		fmt.Println(errors.Wrap(err, "create config"))
 		os.Exit(1)
@@ -91,7 +90,7 @@ func (a Application) Context() context.Context {
 	return a.ctx
 }
 
-func (a Application) LocalConfig() *config.Local {
+func (a Application) Config() *config.Config {
 	return a.cfg
 }
 
@@ -109,8 +108,8 @@ func (a *Application) AddClosers(closers ...Closer) {
 
 func (a *Application) Run() error {
 	for i := range a.runners {
+		runner := a.runners[i]
 		a.group.Go(func() error {
-			runner := a.runners[i]
 			err := runner.Run(a.ctx)
 			if err != nil {
 				return errors.Wrapf(err, "start runner[%s]", runner)
@@ -126,7 +125,7 @@ func (a *Application) Shutdown() {
 		closer := a.closers[i-1]
 		err := closer.Close()
 		if err != nil {
-			a.logger.Error(a.ctx, err, zap.String("closer", fmt.Sprintln(closer)))
+			a.logger.Error(a.ctx, err, log.String("closer", fmt.Sprintln(closer)))
 		}
 	}
 }

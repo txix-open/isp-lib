@@ -33,10 +33,8 @@ func (extension *namingStrategyExtension) UpdateStructDescriptor(structDescripto
 }
 
 func lowerCaseFirstChar(s string) string {
-	if s == "" {
-		return s
+	for i, v := range s {
+		return string(unicode.ToLower(v)) + s[i+1:]
 	}
-	arr := []rune(s)
-	arr[0] = unicode.ToLower(arr[0])
-	return string(arr)
+	return ""
 }

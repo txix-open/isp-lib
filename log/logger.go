@@ -56,22 +56,27 @@ func New(opts ...Option) (*Adapter, error) {
 	return a, nil
 }
 
-func (a *Adapter) Info(ctx context.Context, message interface{}, fields ...zap.Field) {
+func (a *Adapter) Info(ctx context.Context, message interface{}, fields ...Field) {
 	a.Log(ctx, InfoLevel, message, fields...)
 }
 
-func (a *Adapter) Error(ctx context.Context, message interface{}, fields ...zap.Field) {
+func (a *Adapter) Error(ctx context.Context, message interface{}, fields ...Field) {
 	a.Log(ctx, ErrorLevel, message, fields...)
 }
 
-func (a *Adapter) Debug(ctx context.Context, message interface{}, fields ...zap.Field) {
+func (a *Adapter) Debug(ctx context.Context, message interface{}, fields ...Field) {
 	a.Log(ctx, DebugLevel, message, fields...)
 }
 
-func (a *Adapter) Log(ctx context.Context, level Level, message interface{}, fields ...zap.Field) {
-	entry := a.logger.Check(zapcore.Level(level), fmt.Sprintf("%s", message))
+func (a *Adapter) Log(ctx context.Context, level Level, message interface{}, fields ...Field) {
+	entry := a.logger.Check(zapcore.Level(level), fmt.Sprintf("%v", message))
 	if entry != nil {
-		entry.Write(append(ContextLogValues(ctx), fields...)...)
+		arr := append(ContextLogValues(ctx), fields...)
+		zapFields := make([]zap.Field, len(arr))
+		for i := range arr {
+			zapFields[i] = zap.Field(arr[i])
+		}
+		entry.Write(zapFields...)
 	}
 }
 
