@@ -13,6 +13,7 @@ import (
 
 const (
 	ProxyMethodNameHeader = "proxy_method_name"
+	RequestIdHeader       = "x-request-id"
 )
 
 type HandlerFunc func(ctx context.Context, message *isp.Message) (*isp.Message, error)
@@ -42,11 +43,10 @@ func (m *Mux) Request(ctx context.Context, message *isp.Message) (*isp.Message, 
 	if !ok {
 		return nil, errors.New("medata is expected in context")
 	}
-	values := md[ProxyMethodNameHeader]
-	if len(values) == 0 {
-		return nil, status.Errorf(codes.DataLoss, "metadata [%s] is required", ProxyMethodNameHeader)
+	endpoint, err := stringFromMd(ProxyMethodNameHeader, md)
+	if err != nil {
+		return nil, err
 	}
-	endpoint := values[0]
 	ctx = log.ToContext(ctx, log.String("endpoint", endpoint))
 	handler, ok := m.unaryHandlers[endpoint]
 	if !ok {

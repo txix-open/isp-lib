@@ -11,7 +11,7 @@ import (
 type Middleware func(next grpc.HandlerFunc) grpc.HandlerFunc
 
 type RequestBodyExtractor interface {
-	Extract(ctx context.Context, message *isp.Message, type_ reflect.Type) (reflect.Value, error)
+	Extract(ctx context.Context, message *isp.Message, reqBodyType reflect.Type) (reflect.Value, error)
 }
 
 type ResponseBodyMapper interface {

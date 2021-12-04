@@ -13,11 +13,11 @@ type param struct {
 	builder ParamBuilder
 }
 
-type Handler struct {
+type Caller struct {
 	bodyExtractor RequestBodyExtractor
 	bodyMapper    ResponseBodyMapper
 
-	func_        reflect.Value
+	handler      reflect.Value
 	paramsCount  int
 	params       []param
 	reqBodyIndex int
@@ -29,14 +29,14 @@ func NewCaller(
 	bodyExtractor RequestBodyExtractor,
 	bodyMapper ResponseBodyMapper,
 	paramMappers map[string]ParamMapper,
-) (*Handler, error) {
+) (*Caller, error) {
 	rt := reflect.TypeOf(f)
 	if rt.Kind() != reflect.Func {
 		return nil, errors.New("function expected")
 	}
 	paramsCount := rt.NumIn()
 	reqBodyIndex := -1
-	func_ := reflect.ValueOf(f)
+	handler := reflect.ValueOf(f)
 	var reqBodyType reflect.Type
 	params := make([]param, 0)
 
@@ -58,10 +58,10 @@ func NewCaller(
 		params = append(params, param{index: i, builder: mapper.Builder})
 	}
 
-	return &Handler{
+	return &Caller{
 		bodyExtractor: bodyExtractor,
 		bodyMapper:    bodyMapper,
-		func_:         func_,
+		handler:       handler,
 		paramsCount:   paramsCount,
 		params:        params,
 		reqBodyIndex:  reqBodyIndex,
@@ -69,7 +69,7 @@ func NewCaller(
 	}, nil
 }
 
-func (h *Handler) Handle(ctx context.Context, message *isp.Message) (*isp.Message, error) {
+func (h *Caller) Handle(ctx context.Context, message *isp.Message) (*isp.Message, error) {
 	args := make([]reflect.Value, h.paramsCount)
 
 	if h.reqBodyIndex != -1 {
@@ -89,7 +89,7 @@ func (h *Handler) Handle(ctx context.Context, message *isp.Message) (*isp.Messag
 		args[p.index] = reflect.ValueOf(value)
 	}
 
-	returned := h.func_.Call(args)
+	returned := h.handler.Call(args)
 
 	var result interface{}
 	var err error

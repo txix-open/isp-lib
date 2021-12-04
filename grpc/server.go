@@ -37,7 +37,7 @@ type Server struct {
 
 func NewServer(opts ...grpc.ServerOption) *Server {
 	s := &Server{
-		server:  grpc.NewServer(opts...),
+		server: grpc.NewServer(opts...),
 		backend: &service{
 			service: atomic.Value{},
 		},
@@ -54,16 +54,18 @@ func (s *Server) Upgrade(service isp.BackendServiceServer) {
 	s.backend.service.Store(service)
 }
 
-func (s *Server) Serve(address string) error {
+func (s *Server) ListenAndServe(address string) error {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return errors.WithMessagef(err, "listen: %s", address)
 	}
+	return s.Serve(listener)
+}
 
-	err = s.server.Serve(listener)
+func (s *Server) Serve(listener net.Listener) error {
+	err := s.server.Serve(listener)
 	if err != nil {
 		return errors.WithMessage(err, "serve grpc")
 	}
-
 	return nil
 }

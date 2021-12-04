@@ -5,9 +5,10 @@ import (
 	"github.com/integration-system/isp-lib/v3/validator"
 )
 
-func DefaultMapper(logger log.Logger) Mapper {
+func Default(logger log.Logger) Mapper {
 	paramMappers := []ParamMapper{
 		ContextParam(),
+		AuthDataParam(),
 	}
 	return NewMapper(
 		paramMappers,
