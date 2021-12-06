@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-	json2 "encoding/json"
 	"net"
 	"net/http"
 	"strings"
@@ -66,7 +65,7 @@ func (h Handshake) Do(ctx context.Context, host string) (*clientWrapper, error) 
 	errorChan := cli.EventChan(ErrorConnection)
 	configErrorChan := cli.EventChan(ConfigError)
 	cli.OnDefault(func(event string, data []byte) {
-		h.logger.Error(ctx, "unexpected event from config service", log.String("event", event), log.Any("data", json2.RawMessage(data)))
+		h.logger.Error(ctx, "unexpected event from config service", log.String("event", event), log.Any("data", json.RawMessage(data)))
 	})
 
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)

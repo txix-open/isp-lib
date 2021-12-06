@@ -1,23 +1,24 @@
 package schema
 
 import (
-	"github.com/integration-system/jsonschema"
 	"reflect"
 	"sync"
+
+	"github.com/integration-system/jsonschema"
 )
 
-type generator func(field reflect.StructField, t *jsonschema.Type)
+type Generator func(field reflect.StructField, t *jsonschema.Type)
 
 type customSchema struct {
 	mx        sync.RWMutex
-	mapSchema map[string]generator
+	mapSchema map[string]Generator
 }
 
 var CustomGenerators = &customSchema{
-	mapSchema: make(map[string]generator),
+	mapSchema: make(map[string]Generator),
 }
 
-func (c *customSchema) Register(name string, f generator) {
+func (c *customSchema) Register(name string, f Generator) {
 	c.mx.Lock()
 	c.mapSchema[name] = f
 	c.mx.Unlock()
@@ -29,7 +30,7 @@ func (c *customSchema) Remove(name string) {
 	c.mx.Unlock()
 }
 
-func (c *customSchema) getGeneratorByName(name string) generator {
+func (c *customSchema) getGeneratorByName(name string) Generator {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
 

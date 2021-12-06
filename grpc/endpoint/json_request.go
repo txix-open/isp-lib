@@ -13,7 +13,7 @@ import (
 )
 
 type Validator interface {
-	Validate(ctx context.Context, value interface{}) (bool, map[string]string)
+	Validate(value interface{}) (bool, map[string]string)
 }
 
 type JsonRequestExtractor struct {
@@ -29,7 +29,7 @@ func (j JsonRequestExtractor) Extract(ctx context.Context, message *isp.Message,
 
 	elem := instance.Elem()
 
-	ok, details := j.validator.Validate(ctx, elem.Interface())
+	ok, details := j.validator.Validate(elem.Interface())
 	if !ok {
 		descriptions := make([]string, 0, len(details))
 		for field, err := range details {

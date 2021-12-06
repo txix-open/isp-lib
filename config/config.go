@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"path"
 
@@ -10,7 +9,7 @@ import (
 )
 
 type Validator interface {
-	Validate(ctx context.Context, value interface{}) (bool, map[string]string)
+	Validate(value interface{}) (bool, map[string]string)
 }
 
 type Config struct {
@@ -63,7 +62,7 @@ func (c *Config) Optional() Optional {
 	return c.optional
 }
 
-func (c Config) Read(ctx context.Context, ptr interface{}) error {
+func (c Config) Read(ptr interface{}) error {
 	err := c.cfg.Unmarshal(&ptr)
 	if err != nil {
 		return errors.WithMessage(err, "unmarshal config")
@@ -72,7 +71,7 @@ func (c Config) Read(ctx context.Context, ptr interface{}) error {
 	if c.validator == nil {
 		return nil
 	}
-	ok, details := c.validator.Validate(ctx, ptr)
+	ok, details := c.validator.Validate(ptr)
 	if ok {
 		return nil
 	}

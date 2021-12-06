@@ -14,7 +14,7 @@ const (
 	ServiceIdHeader     = "x-service-identity"
 	DomainIdHeader      = "x-domain-identity"
 	SystemIdHeader      = "x-system-identity"
-	UserTokenHeader     = "X-user-header"
+	UserTokenHeader     = "x-user-token"
 	DeviceTokenHeader   = "x-device-token"
 )
 

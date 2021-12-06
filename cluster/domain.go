@@ -1,7 +1,7 @@
 package cluster
 
 import (
-	"encoding/json"
+	"github.com/integration-system/isp-lib/v3/json"
 )
 
 type AddressConfiguration struct {

@@ -2,10 +2,10 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	etpclient "github.com/integration-system/isp-etp-go/v2/client"
+	"github.com/integration-system/isp-lib/v3/json"
 	"github.com/integration-system/isp-lib/v3/log"
 )
 
