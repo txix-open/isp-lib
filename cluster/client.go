@@ -77,6 +77,7 @@ func (c *Client) runSession(ctx context.Context) error {
 			hosts, err := readHosts(data)
 			if err != nil {
 				c.logger.Error(ctx, err)
+				return
 			}
 			upgrader.Upgrade(hosts)
 		})
@@ -91,6 +92,7 @@ func (c *Client) runSession(ctx context.Context) error {
 		routes, err := readRoutes(data)
 		if err != nil {
 			c.logger.Error(ctx, err)
+			return
 		}
 		err = c.eventHandler.routesReceiver.ReceiveRoutes(routes)
 		if err != nil {

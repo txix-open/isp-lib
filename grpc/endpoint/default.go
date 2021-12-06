@@ -16,7 +16,7 @@ func Default(logger log.Logger) Mapper {
 		JsonResponseMapper{},
 	).WithMiddlewares(
 		RequestId(),
-		ErrorLogger(logger),
+		ErrorHandler(logger),
 		Recovery(),
 	)
 }

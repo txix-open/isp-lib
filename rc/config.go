@@ -1,8 +1,6 @@
 package rc
 
 import (
-	"context"
-	"fmt"
 	"sync"
 
 	"github.com/integration-system/bellows"
@@ -11,7 +9,7 @@ import (
 )
 
 type Validator interface {
-	Validate(ctx context.Context, value interface{}) (bool, map[string]string)
+	ValidateToError(value interface{}) error
 }
 
 type Config struct {
@@ -30,7 +28,7 @@ func New(validator Validator, overrideData json.RawMessage) *Config {
 	}
 }
 
-func (c *Config) Upgrade(ctx context.Context, data json.RawMessage, newConfigPtr interface{}, prevConfigPtr interface{}) error {
+func (c *Config) Upgrade(data json.RawMessage, newConfigPtr interface{}, prevConfigPtr interface{}) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -44,18 +42,16 @@ func (c *Config) Upgrade(ctx context.Context, data json.RawMessage, newConfigPtr
 		return errors.WithMessage(err, "unmarshal new config")
 	}
 
-	ok, details := c.validator.Validate(ctx, newConfigPtr)
-	if !ok {
-		descriptions := make([]string, 0, len(details))
-		for field, err := range details {
-			descriptions = append(descriptions, fmt.Sprintf("%s -> %s", field, err))
-		}
-		return errors.Errorf("validate config: %s", descriptions)
+	err = c.validator.ValidateToError(newConfigPtr)
+	if err != nil {
+		return errors.WithMessage(err, "validate config")
 	}
 
-	err = json.Unmarshal(c.prevConfig, prevConfigPtr)
-	if err != nil {
-		return errors.WithMessage(err, "unmarshal previous config")
+	if len(c.prevConfig) > 0 {
+		err = json.Unmarshal(c.prevConfig, prevConfigPtr)
+		if err != nil {
+			return errors.WithMessage(err, "unmarshal previous config")
+		}
 	}
 
 	c.prevConfig = newConfig

@@ -11,7 +11,9 @@ import (
 	"github.com/integration-system/isp-lib/v3/log"
 	"github.com/integration-system/isp-lib/v3/requestid"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func Recovery() Middleware {
@@ -33,14 +35,20 @@ func Recovery() Middleware {
 	}
 }
 
-func ErrorLogger(logger log.Logger) Middleware {
+func ErrorHandler(logger log.Logger) Middleware {
 	return func(next grpc.HandlerFunc) grpc.HandlerFunc {
 		return func(ctx context.Context, message *isp.Message) (*isp.Message, error) {
 			result, err := next(ctx, message)
-			if err != nil {
-				logger.Error(ctx, err)
+			if err == nil {
+				return result, nil
 			}
-			return result, err
+			logger.Error(ctx, err)
+			_, ok := status.FromError(err)
+			if ok {
+				return result, err
+			}
+			//hide error details to prevent potential security leaks
+			return result, status.Error(codes.Internal, "internal service error")
 		}
 	}
 }
@@ -50,7 +58,7 @@ func RequestId() Middleware {
 		return func(ctx context.Context, message *isp.Message) (*isp.Message, error) {
 			md, ok := metadata.FromIncomingContext(ctx)
 			if !ok {
-				return nil, errors.New("metadata expected in context")
+				return nil, errors.New("metadata is expected in context")
 			}
 			values := md.Get(grpc.RequestIdHeader)
 			requestId := ""
@@ -68,18 +76,14 @@ func RequestId() Middleware {
 	}
 }
 
-type LevelLogger interface {
-	Log(ctx context.Context, level log.Level, message interface{}, fields ...log.Field)
-}
-
-func BodyLogger(logger LevelLogger, level log.Level) Middleware {
+func BodyLogger(logger log.Logger) Middleware {
 	return func(next grpc.HandlerFunc) grpc.HandlerFunc {
 		return func(ctx context.Context, message *isp.Message) (*isp.Message, error) {
-			logger.Log(ctx, level, "request body", log.Any("requestBody", json.RawMessage(message.GetBytesBody())))
+			logger.Debug(ctx, "request body", log.Any("requestBody", json.RawMessage(message.GetBytesBody())))
 
 			response, err := next(ctx, message)
 			if err == nil {
-				logger.Log(ctx, level, "response body", log.Any("responseBody", json.RawMessage(response.GetBytesBody())))
+				logger.Debug(ctx, "response body", log.Any("responseBody", json.RawMessage(response.GetBytesBody())))
 			}
 
 			return response, err

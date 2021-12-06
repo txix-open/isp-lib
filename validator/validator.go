@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/asaskevich/govalidator"
@@ -29,6 +31,20 @@ func (a Adapter) Validate(v interface{}) (bool, map[string]string) {
 		panic(err)
 	}
 	return false, result
+}
+
+func (a Adapter) ValidateToError(v interface{}) error {
+	ok, details := a.Validate(v)
+	if ok {
+		return nil
+	}
+
+	descriptions := make([]string, 0, len(details))
+	for field, err := range details {
+		descriptions = append(descriptions, fmt.Sprintf("%s -> %s", field, err))
+	}
+	err := strings.Join(descriptions, "; ")
+	return errors.New(err)
 }
 
 func (a Adapter) collectDetails(err error, result map[string]string) error {

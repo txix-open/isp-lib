@@ -6,7 +6,7 @@ import (
 )
 
 func Next() string {
-	value := make([]byte, 24)
+	value := make([]byte, 16)
 	_, err := rand.Read(value)
 	if err != nil {
 		panic(err)

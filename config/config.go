@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"path"
 
 	"github.com/pkg/errors"
@@ -9,7 +8,7 @@ import (
 )
 
 type Validator interface {
-	Validate(value interface{}) (bool, map[string]string)
+	ValidateToError(value interface{}) error
 }
 
 type Config struct {
@@ -71,13 +70,6 @@ func (c Config) Read(ptr interface{}) error {
 	if c.validator == nil {
 		return nil
 	}
-	ok, details := c.validator.Validate(ptr)
-	if ok {
-		return nil
-	}
-	descriptions := make([]string, 0, len(details))
-	for field, err := range details {
-		descriptions = append(descriptions, fmt.Sprintf("%s -> %s", field, err))
-	}
-	return errors.Errorf("validate config: %s", descriptions)
+	err = c.validator.ValidateToError(ptr)
+	return errors.WithMessage(err, "validate config")
 }

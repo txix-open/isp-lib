@@ -21,6 +21,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -60,7 +61,6 @@ require (
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
