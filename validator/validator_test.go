@@ -50,3 +50,16 @@ func TestValidateArray(t *testing.T) {
 	require.False(ok)
 	require.EqualValues(expectedDetails, details)
 }
+
+func TestMap(t *testing.T) {
+	require := require.New(t)
+
+	m := map[string]SubStruct{
+		"key":  {A: ""},
+		"key2": {A: "2"},
+	}
+	ok, details := validator.Default.Validate(m)
+	expectedDetails := map[string]string{"key.A": "non zero value required"}
+	require.False(ok)
+	require.EqualValues(expectedDetails, details)
+}
