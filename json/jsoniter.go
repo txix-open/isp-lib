@@ -21,6 +21,8 @@ func init() {
 	instance.RegisterExtension(naming)
 }
 
+type RawMessage jsoniter.RawMessage
+
 func Marshal(v interface{}) ([]byte, error) {
 	return instance.Marshal(v)
 }

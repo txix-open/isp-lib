@@ -1,8 +1,18 @@
 package cluster
 
+import (
+	"encoding/json"
+)
+
 type AddressConfiguration struct {
-	IP   string `json:"ip"`
-	Port string `json:"port"`
+	IP   string
+	Port string
+}
+
+type ConfigData struct {
+	Version       string
+	Schema        json.RawMessage
+	DefaultConfig json.RawMessage
 }
 
 type ModuleInfo struct {
@@ -10,6 +20,17 @@ type ModuleInfo struct {
 	ModuleVersion    string
 	GrpcOuterAddress AddressConfiguration
 	Endpoints        []EndpointDescriptor
+}
+
+type RoutingConfig []BackendDeclaration
+
+type BackendDeclaration struct {
+	ModuleName      string
+	Version         string
+	LibVersion      string
+	Endpoints       []EndpointDescriptor
+	RequiredModules []ModuleDependency
+	Address         AddressConfiguration
 }
 
 type EndpointDescriptor struct {

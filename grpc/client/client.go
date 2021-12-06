@@ -43,6 +43,7 @@ func New(initialHosts []string, opts ...Option) (*Client, error) {
 	dialOptions = append(
 		dialOptions,
 		grpc.WithResolvers(hostsResolver),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 	)
 
 	grpcCli, err := grpc.Dial(resolverUrl, dialOptions...)

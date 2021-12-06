@@ -12,12 +12,11 @@ func Default(logger log.Logger) Mapper {
 	}
 	return NewMapper(
 		paramMappers,
-		JsonRequestExtractor{},
+		JsonRequestExtractor{validator: validator.Default},
 		JsonResponseMapper{},
 	).WithMiddlewares(
 		RequestId(),
 		ErrorLogger(logger),
 		Recovery(),
-		RequestBodyValidationMiddleware(validator.Default),
 	)
 }

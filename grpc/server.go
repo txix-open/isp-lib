@@ -11,11 +11,11 @@ import (
 )
 
 type service struct {
-	service atomic.Value
+	delegate atomic.Value
 }
 
 func (s *service) Request(ctx context.Context, message *isp.Message) (*isp.Message, error) {
-	delegate, ok := s.service.Load().(isp.BackendServiceServer)
+	delegate, ok := s.delegate.Load().(isp.BackendServiceServer)
 	if !ok {
 		return nil, errors.New("handler is not initialized")
 	}
@@ -23,7 +23,7 @@ func (s *service) Request(ctx context.Context, message *isp.Message) (*isp.Messa
 }
 
 func (s *service) RequestStream(server isp.BackendService_RequestStreamServer) error {
-	delegate, ok := s.service.Load().(isp.BackendServiceServer)
+	delegate, ok := s.delegate.Load().(isp.BackendServiceServer)
 	if !ok {
 		return errors.New("handler is not initialized")
 	}
@@ -32,17 +32,17 @@ func (s *service) RequestStream(server isp.BackendService_RequestStreamServer) e
 
 type Server struct {
 	server  *grpc.Server
-	backend *service
+	service *service
 }
 
 func NewServer(opts ...grpc.ServerOption) *Server {
 	s := &Server{
 		server: grpc.NewServer(opts...),
-		backend: &service{
-			service: atomic.Value{},
+		service: &service{
+			delegate: atomic.Value{},
 		},
 	}
-	isp.RegisterBackendServiceServer(s.server, s.backend)
+	isp.RegisterBackendServiceServer(s.server, s.service)
 	return s
 }
 
@@ -51,7 +51,7 @@ func (s *Server) Shutdown() {
 }
 
 func (s *Server) Upgrade(service isp.BackendServiceServer) {
-	s.backend.service.Store(service)
+	s.service.delegate.Store(service)
 }
 
 func (s *Server) ListenAndServe(address string) error {

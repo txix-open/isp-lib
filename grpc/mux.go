@@ -41,7 +41,7 @@ func (m *Mux) Handle(endpoint string, handler HandlerFunc) *Mux {
 func (m *Mux) Request(ctx context.Context, message *isp.Message) (*isp.Message, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return nil, errors.New("medata is expected in context")
+		return nil, errors.New("metadata is expected in context")
 	}
 	endpoint, err := stringFromMd(ProxyMethodNameHeader, md)
 	if err != nil {

@@ -32,49 +32,43 @@ type Application struct {
 	closers []Closer
 }
 
-func New() *Application {
+func New() (*Application, error) {
 	isDev := strings.ToLower(os.Getenv("APP_MODE")) == "dev"
 	group, ctx := errgroup.WithContext(context.Background())
 
-	localConfigOpts := []config.LocalOption{
+	localConfigOpts := []config.Option{
 		config.WithValidator(validator.Default),
 		config.WithEnvPrefix("LC_ISP"),
 	}
 	cfgFile, err := configFile(isDev)
 	if err != nil {
-		fmt.Println(errors.Wrap(err, "resolve config file path"))
-		os.Exit(1)
-		return nil
+		return nil, errors.WithMessage(err, "resolve config file path")
 	}
 	localConfigOpts = append(localConfigOpts, config.WithReadingFromFile(cfgFile))
 
 	cfg, err := config.New(localConfigOpts...)
 	if err != nil {
-		fmt.Println(errors.Wrap(err, "create config"))
-		os.Exit(1)
-		return nil
+		return nil, errors.WithMessage(err, "create config")
 	}
 
 	loggerOpts := []log.Option{log.WithDevelopmentMode(), log.WithLevel(log.DebugLevel)}
 	if !isDev {
 		loggerOpts = []log.Option{log.WithLevel(log.InfoLevel)}
-		logFilePath := cfg.GetString("LOG_FILE_PATH")
+		logFilePath := cfg.Optional().GetString("LOG_FILE_PATH", "")
 		if logFilePath != "" {
 			rotation := log.Rotation{
 				File:       logFilePath,
-				MaxSizeMb:  512,
+				MaxSizeMb:  cfg.Optional().GetInt("LOG_FILE_MAX_SIZE_MB", 512),
 				MaxDays:    0,
-				MaxBackups: 4,
-				Compress:   true,
+				MaxBackups: cfg.Optional().GetInt("LOG_FILE_MAX_BACKUPS", 4),
+				Compress:   cfg.Optional().GetBool("LOG_FILE_COMPRESS", true),
 			}
 			loggerOpts = append(loggerOpts, log.WithFileRotation(rotation))
 		}
 	}
 	logger, err := log.New(loggerOpts...)
 	if err != nil {
-		fmt.Println(errors.Wrap(err, "create logger"))
-		os.Exit(1)
-		return nil
+		return nil, errors.WithMessage(err, "create logger")
 	}
 
 	return &Application{
@@ -83,7 +77,7 @@ func New() *Application {
 		logger:  logger,
 		group:   group,
 		closers: []Closer{logger},
-	}
+	}, nil
 }
 
 func (a Application) Context() context.Context {
@@ -94,7 +88,7 @@ func (a Application) Config() *config.Config {
 	return a.cfg
 }
 
-func (a Application) Logger() log.Logger {
+func (a Application) Logger() *log.Adapter {
 	return a.logger
 }
 
@@ -112,7 +106,7 @@ func (a *Application) Run() error {
 		a.group.Go(func() error {
 			err := runner.Run(a.ctx)
 			if err != nil {
-				return errors.Wrapf(err, "start runner[%s]", runner)
+				return errors.WithMessagef(err, "start runner[%s]", runner)
 			}
 			return nil
 		})
@@ -140,7 +134,7 @@ func configFile(isDev bool) (string, error) {
 	}
 	ex, err := os.Executable()
 	if err != nil {
-		return "", errors.Wrap(err, "get executable path")
+		return "", errors.WithMessage(err, "get executable path")
 	}
 	return path.Join(path.Dir(ex), "config.yml"), nil
 }

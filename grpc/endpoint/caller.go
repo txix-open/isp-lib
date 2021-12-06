@@ -78,7 +78,6 @@ func (h *Caller) Handle(ctx context.Context, message *isp.Message) (*isp.Message
 			return nil, err
 		}
 		args[h.reqBodyIndex] = value
-		ctx = RequestBodyToContext(ctx, value.Interface())
 	}
 
 	for _, p := range h.params {

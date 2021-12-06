@@ -5,16 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-	"strings"
 
 	"github.com/integration-system/isp-lib/v3/grpc"
 	"github.com/integration-system/isp-lib/v3/grpc/isp"
 	"github.com/integration-system/isp-lib/v3/log"
 	"github.com/integration-system/isp-lib/v3/requestid"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 func Recovery() Middleware {
@@ -44,31 +41,6 @@ func ErrorLogger(logger log.Logger) Middleware {
 				logger.Error(ctx, err)
 			}
 			return result, err
-		}
-	}
-}
-
-type Validator interface {
-	Validate(ctx context.Context, value interface{}) (bool, map[string]string)
-}
-
-func RequestBodyValidationMiddleware(validator Validator) Middleware {
-	return func(next grpc.HandlerFunc) grpc.HandlerFunc {
-		return func(ctx context.Context, message *isp.Message) (*isp.Message, error) {
-			requestBody := RequestBodyFromContext(ctx)
-			if requestBody == nil {
-				return next(ctx, message)
-			}
-			ok, errors := validator.Validate(ctx, requestBody)
-			if !ok {
-				descriptions := make([]string, 0, len(errors))
-				for field, err := range errors {
-					descriptions = append(descriptions, fmt.Sprintf("%s -> %s", field, err))
-				}
-				err := status.Errorf(codes.InvalidArgument, "invalid request body: %v", strings.Join(descriptions, ";"))
-				return nil, err
-			}
-			return next(ctx, message)
 		}
 	}
 }
