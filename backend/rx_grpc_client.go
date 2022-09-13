@@ -9,7 +9,6 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/integration-system/isp-lib/v2/isp"
 	"github.com/integration-system/isp-lib/v2/utils"
-	"google.golang.org/grpc/balancer/roundrobin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
@@ -163,7 +162,7 @@ func NewRxGrpcClient(opts ...RxOption) *RxGrpcClient {
 
 	client.resolver = manual.NewBuilderWithScheme(resolverScheme)
 	dialOpts := append(client.options,
-		grpc.WithBalancerName(roundrobin.Name),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 		grpc.WithResolvers(client.resolver),
 	)
 	conn, err := grpc.Dial(resolverUrl, dialOpts...)
